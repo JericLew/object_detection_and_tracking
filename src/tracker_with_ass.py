@@ -22,7 +22,7 @@ class objectTracker():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video1.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video3.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -41,6 +41,8 @@ class objectTracker():
         self.multi_tracker = np.empty((0, 4)) # create tracker list
 
         # Data storage
+        self.track_bboxes = []
+        self.track_class_ids = []
         self.detect_bboxes = []
         self.detect_conf = []
         self.detect_class_ids = []
@@ -109,19 +111,11 @@ class objectTracker():
         print('Tracking...')
 
         # Update the multi-object tracker
-        track_bboxes = self.get_next_multi_tracker(current_frame)
+        self.track_bboxes = self.get_next_multi_tracker(current_frame)
         
         # Extract class ids from multi_tracker
-        class_ids = self.multi_tracker[:,1]
+        self.track_class_ids = self.multi_tracker[:,1]
 
-        draw_bbox(current_frame, track_bboxes, class_ids, tracking=True)
-
-        # Write the frame into the file 'output.avi' 
-        self.out.write(current_frame)
-           
-        cv2.imshow("camera", current_frame) # Display image
-        cv2.waitKey(1)
- 
 
     # Update the multi-object tracker and return track bboxes in list
     def update_multi_tracker(self, current_frame):
@@ -133,6 +127,7 @@ class objectTracker():
                 success, box = self.multi_tracker[track_id][0].update(current_frame)
                 track_bboxes.append(box)
         return track_bboxes
+
     
     def get_next_multi_tracker(self, current_frame):
         track_bboxes = []
@@ -144,7 +139,16 @@ class objectTracker():
                 track_bboxes.append(box)
         return track_bboxes
 
+    
+    def write_frame(self, current_frame):
+        # Write the frame into the file 'output.avi' 
+        self.out.write(current_frame)
 
+    
+    def display_frame(self, current_frame):
+        cv2.imshow("camera", current_frame) # Display image
+        cv2.waitKey(1)
+        
 
 def main(args=None):
     object_tracker = objectTracker()
@@ -163,8 +167,7 @@ def main(args=None):
             break
 
         # if have init tracks at nth frame: do detection and matching
-        if object_tracker.frame_count % 10 == 0:
-
+        if object_tracker.frame_count % object_tracker.rematch_rate == 0:
             # pass through detector
             object_tracker.detect(current_frame)
             # do association with updated tracks and detections
@@ -176,10 +179,12 @@ def main(args=None):
 
         # if have init tracks and not at nth frame: continue tracking
         else:
-
             # continue tracking with updated track
             object_tracker.track(current_frame)
 
+        draw_bbox(current_frame, object_tracker.track_bboxes, object_tracker.track_class_ids, tracking=True)
+        object_tracker.write_frame(current_frame)
+        object_tracker.display_frame(current_frame)
         object_tracker.frame_count += 1
 
         # Calculate the elapsed time

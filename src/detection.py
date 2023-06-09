@@ -51,6 +51,8 @@ class objectDetector():
         self.detect_bboxes = result_bboxes
         self.detect_conf = result_confidences
         self.detect_class_ids = result_class_ids
+    
+    def write_video(self, current_frame):
 
 def main(args=None):
     object_detector = objectDetector()
