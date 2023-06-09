@@ -22,7 +22,7 @@ class objectTracker():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video4.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video1.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -32,7 +32,7 @@ class objectTracker():
 
         # Detector init
         
-        self.net = cv2.dnn.readNet('/home/jeric/yolov5/yolov5s.onnx') # input obj detector network
+        self.net = cv2.dnn.readNet('/home/jeric/tracking_ws/models/yolov5s.onnx') # input obj detector network
 
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
