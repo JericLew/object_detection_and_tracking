@@ -21,10 +21,48 @@ def tlwh_to_tlbr(box):
     box = (x, y, x + w, y + h)
     return box
 
-def unwrap_detection(input_image, output_data, dect_conf_thres, class_conf_thres):
+
+def unwrap_detection_numpy(input_image, output_data, detect_conf_thres, class_conf_thres):
+    boxes = []
+    confidences = []
+    class_ids = []
+
+    image_width, image_height, _ = input_image.shape
+    x_factor = image_width / 640
+    y_factor = image_height / 640
+
+    valid_indices = np.where(output_data[:, 4] >= detect_conf_thres)[0]
+    valid_classes = np.argmax(output_data[valid_indices, 5:], axis=1)
+    valid_scores = output_data[valid_indices, 5:][np.arange(len(valid_indices)), valid_classes]
+    valid_mask = valid_scores > class_conf_thres
+
+    valid_indices = valid_indices[valid_mask]
+    valid_classes = valid_classes[valid_mask]
+    valid_scores = valid_scores[valid_mask]
+
+    valid_rows = output_data[valid_indices]
+    valid_boxes = valid_rows[:, :4]
+
+    valid_boxes[:, 0] = (valid_boxes[:, 0] - 0.5 * valid_boxes[:, 2])
+    valid_boxes[:, 1] = (valid_boxes[:, 1] - 0.5 * valid_boxes[:, 3])
+    valid_boxes = valid_boxes.astype(int)
+    valid_boxes[:, 0] = valid_boxes[:, 0] * x_factor
+    valid_boxes[:, 1] = valid_boxes[:, 1] * y_factor
+
+    valid_boxes[:, 2] = valid_boxes[:, 2] * x_factor
+    valid_boxes[:, 3] = valid_boxes[:, 3] * y_factor
+
+    boxes = valid_boxes.tolist()
+    confidences = valid_scores.tolist()
+    class_ids = valid_classes.tolist()
+
+    return boxes, confidences, class_ids
+
+def unwrap_detection(input_image, output_data, detect_conf_thres, class_conf_thres):
     '''
     Outputs boxes in tlwh
     '''
+    
     boxes = []
     confidences = []
     class_ids = []
@@ -39,7 +77,7 @@ def unwrap_detection(input_image, output_data, dect_conf_thres, class_conf_thres
     for r in range(rows):
         row = output_data[r]
         confidence = row[4]
-        if confidence >= dect_conf_thres: # ignore low detection confidence
+        if confidence >= detect_conf_thres: # ignore low detection confidence
             classes_scores = row[5:]
             _, _, _, max_indx = cv2.minMaxLoc(classes_scores)
             class_id = max_indx[1]
@@ -56,11 +94,11 @@ def unwrap_detection(input_image, output_data, dect_conf_thres, class_conf_thres
 
     return boxes, confidences, class_ids
 
-def nms(in_boxes, in_confidences,in_class_ids):
+def nms(in_boxes, in_confidences,in_class_ids, detect_conf_thres, nms_thres):
     result_class_ids = []
     result_confidences = []
     result_boxes = []
-    indexes = cv2.dnn.NMSBoxes(in_boxes, in_confidences, 0.25, 0.45) 
+    indexes = cv2.dnn.NMSBoxes(in_boxes, in_confidences, detect_conf_thres, nms_thres) 
     for i in indexes:
         result_boxes.append(in_boxes[i])
         result_confidences.append(in_confidences[i])
@@ -74,20 +112,36 @@ def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
 
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
-    for object_id, box in enumerate(result_boxes):
-        # Unpack the bounding box coordinates
-        (x, y, w, h) = [int(coord) for coord in box]
-        class_id = result_class_ids[object_id]
-        color = colors[class_id % len(colors)]
-        #conf  = result_confidences[object_id]
-        cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
-        cv2.rectangle(current_frame, (x,y-20), (x+w,y), color, -1)
-        if tracking:
-            cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
-        else:
-            cv2.putText(current_frame, class_list[class_id], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+    if tracking==False:
+        for object_id, box in enumerate(result_boxes):
+            # Unpack the bounding box coordinates
+            (x, y, w, h) = [int(coord) for coord in box]
+            class_id = result_class_ids[object_id]
+            color = colors[class_id % len(colors)]
+            #conf  = result_confidences[object_id]
+            cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
+            cv2.rectangle(current_frame, (x,y-20), (x+w,y), color, -1)
+            if tracking:
+                cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            else:
+                cv2.putText(current_frame, class_list[class_id], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+    else:
+        for object_id, box in enumerate(result_boxes):
+            if box == None:
+                continue
+            # Unpack the bounding box coordinates
+            (x, y, w, h) = [int(coord) for coord in box]
+            class_id = result_class_ids[object_id]
+            color = colors[class_id % len(colors)]
+            #conf  = result_confidences[object_id]
+            cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
+            cv2.rectangle(current_frame, (x,y-20), (x+w,y), color, -1)
+            if tracking:
+                cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            else:
+                cv2.putText(current_frame, class_list[class_id], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
 
-
+        
 def calculate_iou(bb1, bb2):
     '''
     input in tlwh
@@ -108,7 +162,7 @@ def calculate_iou(bb1, bb2):
 
 
 def hung_algo(track_boxes, detect_boxes):
-    iou_threshold = 0.4
+    iou_threshold = 0.7
     # Create an empty list to store matches
     matches = []
     unmatched_tracks = list(range(len(track_boxes)))
@@ -120,11 +174,12 @@ def hung_algo(track_boxes, detect_boxes):
     # Calculate IOU for each track-detection pair and populate the cost matrix
     for i, track in enumerate(track_boxes):
         for j, detection in enumerate(detect_boxes):
-
-            iou = calculate_iou(track, detection)
-
-            # Assign IOU to the cost matrix
-            cost_matrix[i, j] = 1 - iou
+            if track == None:
+                cost_matrix[i, j] = 99
+            else:
+                iou = calculate_iou(track, detection)
+                # Assign IOU to the cost matrix
+                cost_matrix[i, j] = 1 - iou
 
     # Perform matching using the Hungarian algorithm
     row_ind, col_ind = linear_sum_assignment(cost_matrix)

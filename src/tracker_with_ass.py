@@ -1,33 +1,52 @@
 import cv2 
 import numpy as np
 from helper_funcs import *
-
+'''
+TODO
+- Fix drifing (readd track)
+- Make rematch rate dependant on FPS
+- Increase speed
+'''
 class objectTracker():
 
     def __init__(self):
         # Constan-ts
-        self.dect_conf_thres = 0.4
+        self.detect_conf_thres = 0.4
         self.class_conf_thres = 0.25
-        self.max_miss_streak = 5
-        self.min_hit_streak = 5
+        self.nms_thres = 0.4
+        self.max_miss_streak = 9 # max number of misses during track refresh
+        self.min_hit_streak = 3 # min number of hits during track refresh
+        self.rematch_rate = 10 # no of frames per track refresh
 
         # Variables
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video2.avi') # Create a VideoCapture object
-        # self.cap = cv2.VideoCapture(0)  
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video4.avi') # Create a VideoCapture object
+        # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.fh = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"FPS: {self.fps}, Width: {self.fw}, Height: {self.fh}")
-        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/video_output/output_tracker.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
+        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/video_output/detect_tracker_output.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Detector init
+        
         self.net = cv2.dnn.readNet('/home/jeric/yolov5/yolov5s.onnx') # input obj detector network
+
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
         # Multi-Tracker init
         self.multi_tracker = np.empty((0, 4)) # create tracker list
+
+        # Data storage
+        self.detect_bboxes = []
+        self.detect_conf = []
+        self.detect_class_ids = []
+        self.matches = []
+        self.unmatched_tracks = []
+        self.unmatched_detections = []
 
 
     def detect(self, current_frame):
@@ -42,136 +61,140 @@ class objectTracker():
         output = predictions[0]
 
         # unwrap detections into usable format
-        boxes, confidences, class_ids = unwrap_detection(input_image,output, self.dect_conf_thres, self.class_conf_thres)
+        bboxes, confidences, class_ids = unwrap_detection_numpy(input_image,output, self.detect_conf_thres, self.class_conf_thres)
 
         # NMS to remove dup and overlap
-        result_boxes, result_confidences, result_class_ids = nms(boxes, confidences, class_ids)
+        result_bboxes, result_confidences, result_class_ids = nms(bboxes, confidences, class_ids, self.detect_conf_thres, self.nms_thres)
 
-        return result_boxes, result_confidences, result_class_ids
-
-    def init_track(self, current_frame, result_boxes, result_confidences, result_class_ids):
-        print('Init Track...')
-
-        # create track for each detection
-        for i in range(len(result_boxes)):
-            tracker = cv2.legacy.TrackerKCF.create()
-            success = tracker.init(current_frame, result_boxes[i])
-            tracker_info = np.array([tracker, result_class_ids[i], 1, 0]) # list of [tracker, class_id, no of hits, no of misses] 
-            self.multi_tracker = np.append(self.multi_tracker, [tracker_info], axis=0)
+        self.detect_bboxes = result_bboxes
+        self.detect_conf = result_confidences
+        self.detect_class_ids = result_class_ids
+        
+    def association(self, current_frame):
+        track_bboxes = self.update_multi_tracker(current_frame)
+        self.matches, self.unmatched_tracks, self.unmatched_detections = \
+            hung_algo(track_bboxes, self.detect_bboxes) # matches in (track_id, detect_id)
 
     # handle new tracks and deleted tracks aft a few hits or miss
-    def refresh_track(self, current_frame, matches, unmatched_tracks, unmatched_detections, result_boxes, detect_class_ids):
-        '''
-        TODO improve class handling (might have diff classs and dk which correct)
-        '''
+    def refresh_track(self, current_frame):
         print('Refreshing Track...')
-        
+
         # if track and detect match, add 1 to hit streak and update class if needed
-        for track_id, detect_id in matches:
-            self.multi_tracker[track_id][2] += 1
-            if self.multi_tracker[track_id][1] != detect_class_ids[detect_id]:
-                self.multi_tracker[track_id][1] = detect_class_ids[detect_id]
+        for track_id, detect_id in self.matches:
+            if self.multi_tracker[track_id][0] == None:
+                continue
+            self.multi_tracker[track_id][2] += 1 # +1 to hit_streak
+            self.multi_tracker[track_id][3] = 0 # reset miss_streak
+            if self.multi_tracker[track_id][1] != self.detect_class_ids[detect_id]:
+                self.multi_tracker[track_id][1] = self.detect_class_ids[detect_id]
 
         # add unmatched detections to track
-        for detect_id in unmatched_detections:
-            tracker = cv2.legacy.TrackerKCF.create()
-            success = tracker.init(current_frame, result_boxes[detect_id])
-            tracker_info = np.array([tracker, detect_class_ids[detect_id], 1, 0]) # list of [tracker, class_id, no of hits, no of misses] 
+        for detect_id in self.unmatched_detections:
+            tracker = cv2.legacy.TrackerMOSSE_create()
+            success = tracker.init(current_frame, self.detect_bboxes[detect_id])
+            tracker_info = np.array([tracker, self.detect_class_ids[detect_id], 1, 0]) # list of [tracker, class_id, no of hits, no of misses]
             self.multi_tracker = np.append(self.multi_tracker, [tracker_info], axis=0)
         
         # +1 miss_streak to missed tracks
-        for track_id in unmatched_tracks:
-            self.multi_tracker[track_id][3] += 1
-            if self.multi_tracker[track_id][3] >= self.max_miss_streak:
-                self.multi_tracker[track_id][0] = None
+        for track_id in self.unmatched_tracks:
+            if self.multi_tracker[track_id][0] == None:
+                continue
+            # self.multi_tracker[track_id][2] = 0 # reset hit streak
+            self.multi_tracker[track_id][3] += 1 # + 1 to miss streak
+            if self.multi_tracker[track_id][3] >= self.max_miss_streak: # if miss streak larger or equal to allowed
+                self.multi_tracker[track_id][0] = None # make it none if it was already active (so numbers wont jump)   
+                
 
     def track(self, current_frame):
         print('Tracking...')
 
         # Update the multi-object tracker
-        track_boxes = self.update_multi_tracker(current_frame)
+        track_bboxes = self.get_next_multi_tracker(current_frame)
         
         # Extract class ids from multi_tracker
         class_ids = self.multi_tracker[:,1]
 
-        draw_bbox(current_frame, track_boxes, class_ids, tracking=True)
+        draw_bbox(current_frame, track_bboxes, class_ids, tracking=True)
 
         # Write the frame into the file 'output.avi' 
         self.out.write(current_frame)
-        
-        cv2.namedWindow("camera", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("camera", 1280, 720)
+           
         cv2.imshow("camera", current_frame) # Display image
         cv2.waitKey(1)
-    
-    # Update the multi-object tracker and return track boxes in list
+ 
+
+    # Update the multi-object tracker and return track bboxes in list
     def update_multi_tracker(self, current_frame):
-        track_boxes = []
-        for tracker in self.multi_tracker[:, 0]:
-            if tracker == None:
-                continue
-            success, box = tracker.update(current_frame)
-            track_boxes.append(box)
-        return track_boxes
+        track_bboxes = []
+        for track_id in range(len(self.multi_tracker)):
+            if self.multi_tracker[track_id][0] == None:
+                track_bboxes.append(None)
+            else:
+                success, box = self.multi_tracker[track_id][0].update(current_frame)
+                track_bboxes.append(box)
+        return track_bboxes
+    
+    def get_next_multi_tracker(self, current_frame):
+        track_bboxes = []
+        for track_id in range(len(self.multi_tracker)):
+            if self.multi_tracker[track_id][0] == None or self.multi_tracker[track_id][2] < self.min_hit_streak:
+                track_bboxes.append(None)
+            else:
+                success, box = self.multi_tracker[track_id][0].update(current_frame)
+                track_bboxes.append(box)
+        return track_bboxes
 
 
 
 def main(args=None):
     object_tracker = objectTracker()
+    cv2.namedWindow("camera", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("camera", 1280, 720)
+    cv2.cuda.setDevice(0) 
+
     while 1:
+        # Start the timer
+        start_time = cv2.getTickCount()
+
         ret, current_frame = object_tracker.cap.read()
 
-        # if no tracks init tracks: do detection and init track
-        if not np.any(object_tracker.multi_tracker):
-                                    
-            # Start the timer
-            start_time = cv2.getTickCount()
-
-            # pass through detector
-            result_boxes, result_confidences, result_class_ids = object_tracker.detect(current_frame)
-
-            # initialise tracking
-            object_tracker.init_track(current_frame,result_boxes, result_confidences, result_class_ids)
-        
-            # Calculate the elapsed timE
-            ticks = cv2.getTickCount() - start_time
-            elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
-            print("Time taken for detect and init track:", elapsed_time, "milliseconds")
+        if not ret:
+            print("Nothing Read")
+            break
 
         # if have init tracks at nth frame: do detection and matching
-        elif object_tracker.frame_count % 10 == 0:
-
-            # Start the timer
-            start_time = cv2.getTickCount()
+        if object_tracker.frame_count % 10 == 0:
 
             # pass through detector
-            result_boxes, result_confidences, result_class_ids = object_tracker.detect(current_frame)
+            object_tracker.detect(current_frame)
+            # do association with updated tracks and detections
 
-            track_boxes = object_tracker.update_multi_tracker(current_frame)
+            object_tracker.association(current_frame)
+            # handle matches, unmatched tracks and unmatched detections
 
-            matches, unmatched_tracks, unmatched_detections = hung_algo(track_boxes , result_boxes)
-            object_tracker.refresh_track(current_frame, matches, unmatched_tracks, unmatched_detections, result_boxes, result_class_ids)
-
-            # Calculate the elapsed timE
-            ticks = cv2.getTickCount() - start_time
-            elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
-            print("Time taken for detect and refresh track:", elapsed_time, "milliseconds")
+            object_tracker.refresh_track(current_frame)
 
         # if have init tracks and not at nth frame: continue tracking
         else:
-            # Start the timer
-            start_time = cv2.getTickCount()
 
+            # continue tracking with updated track
             object_tracker.track(current_frame)
-
-            # Calculate the elapsed timE
-            ticks = cv2.getTickCount() - start_time
-            elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
-            print("Time taken for continue track:", elapsed_time, "milliseconds")
 
         object_tracker.frame_count += 1
 
+        # Calculate the elapsed time
+        ticks = cv2.getTickCount() - start_time
+        elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
+        print("Time taken:", elapsed_time, "milliseconds\n")
 
 
 if __name__ == '__main__':
+    # Start the timer
+    total_start_time = cv2.getTickCount()
+
     main()
+    
+    # Calculate the elapsed time
+    total_ticks = cv2.getTickCount() - total_start_time
+    total_elapsed_time = (total_ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
+    print("Total Time taken:", total_elapsed_time, "milliseconds\n")

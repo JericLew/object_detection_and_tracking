@@ -11,7 +11,7 @@ class objectTracker():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video2.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video4.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0)  
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -19,7 +19,7 @@ class objectTracker():
         print(self.fps)
         print(self.fw)
         print(self.fh)
-        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/video_output/output_tracker.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
+        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/video_output/tracker_output.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Detector and Tracker init
         self.net = cv2.dnn.readNet('/home/jeric/yolov5/yolov5s.onnx') # input obj detector network
