@@ -14,7 +14,7 @@ class objectDetector():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video10.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video1.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0)  
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -24,6 +24,9 @@ class objectDetector():
 
         # Detector init
         self.net = cv2.dnn.readNet('/home/jeric/yolov5/yolov5s.onnx') # input obj detector network
+
+        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
         # Data storage
         self.detect_bboxes = []
@@ -43,7 +46,7 @@ class objectDetector():
         output = predictions[0]
 
         # unwrap detections into usable format
-        bboxes, confidences, class_ids = unwrap_detection(input_image,output, self.detect_conf_thres, self.class_conf_thres)
+        bboxes, confidences, class_ids = unwrap_detection_numpy(input_image,output, self.detect_conf_thres, self.class_conf_thres)
 
         # NMS to remove dup and overlap
         result_bboxes, result_confidences, result_class_ids = nms(bboxes, confidences, class_ids, self.detect_conf_thres, self.nms_thres)
@@ -52,15 +55,16 @@ class objectDetector():
         self.detect_conf = result_confidences
         self.detect_class_ids = result_class_ids
     
-    def write_video(self, current_frame):
 
 def main(args=None):
     object_detector = objectDetector()
     cv2.namedWindow("camera", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("camera", 1280, 720)
+
     while 1:
         # Start the timer
         start_time = cv2.getTickCount()
+
         ret, current_frame = object_detector.cap.read()
              
         # pass through detector
@@ -77,6 +81,7 @@ def main(args=None):
         ticks = cv2.getTickCount() - start_time
         elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
         print("Time taken for Detection:", elapsed_time, "milliseconds\n")
+
 
 if __name__ == '__main__':
     main()

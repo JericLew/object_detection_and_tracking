@@ -71,11 +71,13 @@ class objectTracker():
         self.detect_bboxes = result_bboxes
         self.detect_conf = result_confidences
         self.detect_class_ids = result_class_ids
-        
+
+
     def association(self, current_frame):
         track_bboxes = self.update_multi_tracker(current_frame)
         self.matches, self.unmatched_tracks, self.unmatched_detections = \
             hung_algo(track_bboxes, self.detect_bboxes) # matches in (track_id, detect_id)
+
 
     # handle new tracks and deleted tracks aft a few hits or miss
     def refresh_track(self, current_frame):
@@ -111,7 +113,7 @@ class objectTracker():
         print('Tracking...')
 
         # Update the multi-object tracker
-        self.track_bboxes = self.get_next_multi_tracker(current_frame)
+        self.get_next_multi_tracker(current_frame)
         
         # Extract class ids from multi_tracker
         self.track_class_ids = self.multi_tracker[:,1]
@@ -119,25 +121,25 @@ class objectTracker():
 
     # Update the multi-object tracker and return track bboxes in list
     def update_multi_tracker(self, current_frame):
-        track_bboxes = []
+        self.track_bboxes = []
         for track_id in range(len(self.multi_tracker)):
             if self.multi_tracker[track_id][0] == None:
-                track_bboxes.append(None)
+                self.track_bboxes.append(None)
             else:
                 success, box = self.multi_tracker[track_id][0].update(current_frame)
-                track_bboxes.append(box)
-        return track_bboxes
+                self.track_bboxes.append(box)
+        return self.track_bboxes
 
     
     def get_next_multi_tracker(self, current_frame):
-        track_bboxes = []
+        self.track_bboxes = []
         for track_id in range(len(self.multi_tracker)):
             if self.multi_tracker[track_id][0] == None or self.multi_tracker[track_id][2] < self.min_hit_streak:
-                track_bboxes.append(None)
+                self.track_bboxes.append(None)
             else:
                 success, box = self.multi_tracker[track_id][0].update(current_frame)
-                track_bboxes.append(box)
-        return track_bboxes
+                self.track_bboxes.append(box)
+        return self.track_bboxes
 
     
     def write_frame(self, current_frame):
@@ -170,11 +172,11 @@ def main(args=None):
         if object_tracker.frame_count % object_tracker.rematch_rate == 0:
             # pass through detector
             object_tracker.detect(current_frame)
+        
             # do association with updated tracks and detections
-
             object_tracker.association(current_frame)
-            # handle matches, unmatched tracks and unmatched detections
 
+            # handle matches, unmatched tracks and unmatched detections
             object_tracker.refresh_track(current_frame)
 
         # if have init tracks and not at nth frame: continue tracking
