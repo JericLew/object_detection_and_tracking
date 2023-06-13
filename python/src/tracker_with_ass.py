@@ -5,6 +5,7 @@ from helper_funcs import *
 TODO
 - Fix drifing (readd track)
 - Make rematch rate dependant on FPS
+- missing frames from detect (drawing and writing not done for detect frames)
 - Increase speed
 '''
 class objectTracker():
@@ -22,7 +23,7 @@ class objectTracker():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video3.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video1.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -74,9 +75,9 @@ class objectTracker():
 
 
     def association(self, current_frame):
-        track_bboxes = self.update_multi_tracker(current_frame)
+        self.track_bboxes = self.update_multi_tracker(current_frame)
         self.matches, self.unmatched_tracks, self.unmatched_detections = \
-            hung_algo(track_bboxes, self.detect_bboxes) # matches in (track_id, detect_id)
+            hung_algo(self.track_bboxes, self.detect_bboxes) # matches in (track_id, detect_id)
 
 
     # handle new tracks and deleted tracks aft a few hits or miss
@@ -106,7 +107,7 @@ class objectTracker():
             # self.multi_tracker[track_id][2] = 0 # reset hit streak
             self.multi_tracker[track_id][3] += 1 # + 1 to miss streak
             if self.multi_tracker[track_id][3] >= self.max_miss_streak: # if miss streak larger or equal to allowed
-                self.multi_tracker[track_id][0] = None # make it none if it was already active (so numbers wont jump)   
+                self.multi_tracker[track_id][0] = None # make it none if it was already active (so numbers wont jump)  
                 
 
     def track(self, current_frame):
@@ -183,10 +184,11 @@ def main(args=None):
         else:
             # continue tracking with updated track
             object_tracker.track(current_frame)
+            draw_bbox(current_frame, object_tracker.track_bboxes, object_tracker.track_class_ids, tracking=True)
+            object_tracker.write_frame(current_frame)
+            object_tracker.display_frame(current_frame)
 
-        draw_bbox(current_frame, object_tracker.track_bboxes, object_tracker.track_class_ids, tracking=True)
-        object_tracker.write_frame(current_frame)
-        object_tracker.display_frame(current_frame)
+
         object_tracker.frame_count += 1
 
         # Calculate the elapsed time
