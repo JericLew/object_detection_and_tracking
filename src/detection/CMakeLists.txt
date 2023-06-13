@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
-project( detection2 )
+project( detection )
 
 set(CMAKE_BUILD_TYPE Debug)
 
+# For extra compiler warnings
 include(CheckCXXCompilerFlag)
 
 function(enable_cxx_compiler_flag_if_supported flag)
@@ -24,12 +25,10 @@ enable_cxx_compiler_flag_if_supported("-Weffc++")
 # enable_cxx_compiler_flag_if_supported("-Wconversion")
 # enable_cxx_compiler_flag_if_supported("-Wsign-conversion")
 
-
-
 # Set to your opencv directory
 set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-add_executable( detection2 detection2.cpp )
-target_link_libraries( detection2 ${OpenCV_LIBS} )
+add_executable( detection detection.cpp )
+target_link_libraries( detection ${OpenCV_LIBS} )

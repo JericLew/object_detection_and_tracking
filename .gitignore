@@ -1,0 +1,15 @@
+# Ignore .mp4 and .avi files
+*.mp4
+*.avi
+
+# Ignore build directory
+build/
+
+# Ignore .vscode directory
+.vscode/
+
+# Ignore __pycache__ directory
+__pycache__/
+
+# Exclude video1.avi
+!video1.avi

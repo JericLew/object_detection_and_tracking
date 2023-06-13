@@ -1,22 +1,73 @@
+#include <iostream>
 #include <fstream>
-
 #include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 
-std::vector<std::string> load_class_list()
+class ObjectDetector
 {
+public:
+    ObjectDetector();
+
+    int runObjectDetection();
+
+// private:
+    // constants
+    const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+
+    const float INPUT_WIDTH = 640.0;
+    const float INPUT_HEIGHT = 640.0;
+    const float SCORE_THRESHOLD = 0.2;
+    const float NMS_THRESHOLD = 0.4;
+    const float CONFIDENCE_THRESHOLD = 0.4;
+
+    struct Detection
+    {
+        int class_id;
+        float confidence;
+        cv::Rect box;
+    };
+
+    // video input details
+    double input_fps;
+    int fw;
+    int fh;
+
+    // variables
+    bool is_cuda = 1;
     std::vector<std::string> class_list;
+    int total_frames = 0;
+
+    // methods
+    void load_class_list(std::vector<std::string>& class_list);
+
+    void load_net(cv::dnn::Net& net, bool is_cuda);
+
+    cv::Mat format_yolov5(const cv::Mat& source);
+
+    void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output,
+        const std::vector<std::string>& className);
+
+    void drawBBox(cv::Mat& frame, std::vector<Detection>& output, const std::vector<std::string>& class_list);
+
+    // init capture, writer and network
+    cv::VideoCapture cap;
+    cv::VideoWriter out;
+    cv::dnn::Net net;
+};
+
+void ObjectDetector::load_class_list(std::vector<std::string>& class_list)
+{
     std::ifstream ifs("/home/jeric/tracking_ws/classes/classes.txt");
     std::string line;
     while (getline(ifs, line))
     {
         class_list.push_back(line);
     }
-    return class_list;
 }
 
-void load_net(cv::dnn::Net& net, bool is_cuda)
+void ObjectDetector::load_net(cv::dnn::Net& net, bool is_cuda)
 {
-    auto result = cv::dnn::readNet("/home/jeric/tracking_ws/models/yolov5s.onnx");
+    cv::dnn::Net result = cv::dnn::readNet("/home/jeric/tracking_ws/models/yolov5s.onnx");
     if (is_cuda)
     {
         std::cout << "Attempty to use CUDA\n";
@@ -32,22 +83,36 @@ void load_net(cv::dnn::Net& net, bool is_cuda)
     net = result;
 }
 
-const std::vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
-
-const float INPUT_WIDTH = 640.0;
-const float INPUT_HEIGHT = 640.0;
-const float SCORE_THRESHOLD = 0.2;
-const float NMS_THRESHOLD = 0.4;
-const float CONFIDENCE_THRESHOLD = 0.4;
-
-struct Detection
+ObjectDetector::ObjectDetector()
 {
-    int class_id;
-    float confidence;
-    cv::Rect box;
-};
+    // Open video input
+    cap.open("/home/jeric/tracking_ws/video_input/video1.avi");
+    if (!cap.isOpened())
+    {
+        std::cerr << "Error opening video file\n";
+    }
 
-cv::Mat format_yolov5(const cv::Mat& source) {
+    // Prints video input info
+    input_fps = cap.get(cv::CAP_PROP_FPS);
+    fw = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
+    fh = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
+    std::cout << "FPS: " << input_fps << ", Width: " << fw << ", Height: " << fh << std::endl;
+
+    // Open video output
+    out.open("/home/jeric/tracking_ws/video_output_c++/detect_output.mp4", cv::VideoWriter::fourcc('m', 'p', '4', 'v'), input_fps, cv::Size(fw, fh));
+    if (!out.isOpened())
+    {
+        std::cerr << "Error creating VideoWriter\n";
+    }
+
+    // Load class list
+    load_class_list(class_list);
+
+    // Load net
+    load_net(net, is_cuda);
+}
+
+cv::Mat ObjectDetector::format_yolov5(const cv::Mat& source) {
     int col = source.cols;
     int row = source.rows;
     int _max = MAX(col, row);
@@ -56,12 +121,14 @@ cv::Mat format_yolov5(const cv::Mat& source) {
     return result;
 }
 
-void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className) {
+void ObjectDetector::detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className) {
     cv::Mat blob;
 
     auto input_image = format_yolov5(image);
     
     cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
+
+    // forward pass into network
     net.setInput(blob);
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
@@ -78,22 +145,24 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
 
+    // unwrap detections
     for (int i = 0; i < rows; ++i) {
 
-        float confidence = data[4];
+        float confidence = data[4]; // conf in 4th address
         if (confidence >= CONFIDENCE_THRESHOLD) {
 
-            float * classes_scores = data + 5;
-            cv::Mat scores(1, className.size(), CV_32FC1, classes_scores);
+            float * classes_scores = data + 5; // address of class scores start 5 addresses away
+            cv::Mat scores(1, className.size(), CV_32FC1, classes_scores); // create mat for score per detection
             cv::Point class_id;
             double max_class_score;
-            minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
+            minMaxLoc(scores, 0, &max_class_score, 0, &class_id); // find max score
             if (max_class_score > SCORE_THRESHOLD) {
 
-                confidences.push_back(confidence);
+                confidences.push_back(confidence); // add conf to vector
 
-                class_ids.push_back(class_id.x);
-
+                class_ids.push_back(class_id.x); // add class_id to vector
+                
+                //c coords of bbox
                 float x = data[0];
                 float y = data[1];
                 float w = data[2];
@@ -107,10 +176,11 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
 
         }
 
-        data += 85;
+        data += 85; // next detection (x,y,w,h,conf,80 class conf)
 
     }
 
+    // nms
     std::vector<int> nms_result;
     cv::dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nms_result);
     for (int i = 0; i < nms_result.size(); i++) {
@@ -119,36 +189,35 @@ void detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, c
         result.class_id = class_ids[idx];
         result.confidence = confidences[idx];
         result.box = boxes[idx];
-        output.push_back(result);
+        output.push_back(result); // add to output
     }
 }
 
-int main(int argc, char **argv)
+void ObjectDetector::drawBBox(cv::Mat& frame, std::vector<Detection>& output, const std::vector<std::string>& class_list)
 {
+    int detections = output.size();
 
-    std::vector<std::string> class_list = load_class_list();
-
-    cv::Mat frame;
-    cv::VideoCapture capture("/home/jeric/tracking_ws/video_input/video1.avi");
-    if (!capture.isOpened())
+    for (int i = 0; i < detections; ++i)
     {
-        std::cerr << "Error opening video file\n";
-        return -1;
+        auto detection = output[i];
+        auto box = detection.box;
+        auto classId = detection.class_id;
+        const auto color = colors[classId % colors.size()];
+        cv::rectangle(frame, box, color, 3);
+        cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
+        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
-
-    bool is_cuda = argc > 1 && strcmp(argv[1], "cuda") == 0;
-
-    cv::dnn::Net net;
-    load_net(net, is_cuda);
-
-    auto start = std::chrono::high_resolution_clock::now();
-    int frame_count = 0;
-    float fps = -1;
-    int total_frames = 0;
+}
+int ObjectDetector::runObjectDetection()
+{ 
+    cv::Mat frame;
 
     while (true)
     {
-        capture.read(frame);
+        auto start = std::chrono::high_resolution_clock::now();
+
+        cap.read(frame);
+
         if (frame.empty())
         {
             std::cout << "End of stream\n";
@@ -157,57 +226,35 @@ int main(int argc, char **argv)
 
         std::vector<Detection> output;
         detect(frame, net, output, class_list);
-
-        frame_count++;
+        drawBBox(frame, output, class_list);
         total_frames++;
-
-        int detections = output.size();
-
-        for (int i = 0; i < detections; ++i)
-        {
-
-            auto detection = output[i];
-            auto box = detection.box;
-            auto classId = detection.class_id;
-            const auto color = colors[classId % colors.size()];
-            cv::rectangle(frame, box, color, 3);
-
-            cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
-            cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-        }
-
-        if (frame_count >= 30)
-        {
-
-            auto end = std::chrono::high_resolution_clock::now();
-            fps = frame_count * 1000.0 / std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-            frame_count = 0;
-            start = std::chrono::high_resolution_clock::now();
-        }
-
-        if (fps > 0)
-        {
-
-            std::ostringstream fps_label;
-            fps_label << std::fixed << std::setprecision(2);
-            fps_label << "FPS: " << fps;
-            std::string fps_label_str = fps_label.str();
-
-            cv::putText(frame, fps_label_str.c_str(), cv::Point(10, 25), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
-        }
-
         cv::imshow("output", frame);
+        out.write(frame);
 
         if (cv::waitKey(1) != -1)
         {
-            capture.release();
+            cap.release();
             std::cout << "finished by user\n";
             break;
         }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        std::cout << "Time taken for detection in ms: " << time_taken  << std::endl;
     }
 
     std::cout << "Total frames: " << total_frames << "\n";
+    cap.release();
+    out.release();
+    cv::destroyAllWindows();
+    return 0;
+}
+
+int main()
+{
+    ObjectDetector detector;
+
+    detector.runObjectDetection();
 
     return 0;
 }
