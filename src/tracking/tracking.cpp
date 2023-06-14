@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/tracking.hpp>
-
+#include <opencv2/tracking/tracking_legacy.hpp>
 class ObjectTracker
 {
 public:
@@ -105,7 +105,7 @@ void ObjectTracker::load_net(cv::dnn::Net& net, bool is_cuda)
 ObjectTracker::ObjectTracker()
 {
     // Open video input
-    cap.open("/home/jeric/tracking_ws/video_input/video3.avi");
+    cap.open("/home/jeric/tracking_ws/video_input/video1.avi");
     if (!cap.isOpened())
     {
         std::cerr << "Error opening video file\n";
@@ -218,7 +218,9 @@ void ObjectTracker::createTrackers(cv::Mat& frame, std::vector<Detection>& outpu
 
     for (int i = 0; i < detections; ++i)
     {
-        cv::Ptr<cv::Tracker> new_tracker = cv::TrackerKCF::create();
+        /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
+        cv::Ptr<cv::Tracker> new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
+        // cv::Ptr<cv::Tracker> new_tracker = cv::TrackerKCF::create();
         new_tracker->init(frame, output[i].box);
         Track new_track;
         new_track.tracker = new_tracker;
