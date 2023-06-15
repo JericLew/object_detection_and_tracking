@@ -184,6 +184,9 @@ def hung_algo(track_boxes, detect_boxes):
     # Perform matching using the Hungarian algorithm
     row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
+    print(row_ind)
+    print(col_ind)
+
     # Create matches based on the matching results
     for row, col in zip(row_ind, col_ind):
         if cost_matrix[row, col] < iou_threshold:  # Set a threshold for accepting matches

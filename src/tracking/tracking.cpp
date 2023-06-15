@@ -1,3 +1,5 @@
+/* Simple tracking with 1 dection at 10th frame and 
+   using KCF/MOSSE for to continue tracking*/
 #include <iostream>
 #include <fstream>
 #include <opencv2/opencv.hpp>
