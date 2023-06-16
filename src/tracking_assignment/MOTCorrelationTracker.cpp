@@ -77,36 +77,26 @@ void MOTCorrelationTracker::initTracker()
     cv::resizeWindow("Resized_Window", 1920, 1080);
 }
 
-cv::Mat MOTCorrelationTracker::formatYOLOv5(const cv::Mat &source)
-{
-    int col = source.cols;
-    int row = source.rows;
-    int _max = MAX(col, row);
-    cv::Mat result = cv::Mat::zeros(_max, _max, CV_8UC3);
-    source.copyTo(result(cv::Rect(0, 0, col, row)));
-    return result;
-}
-
-void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string> &className)
+void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string>& class_list)
 {
     cout << "Detecting...\n";
     cv::Mat blob;
 
-    auto input_image = formatYOLOv5(image);
+    cv::Mat formatted_image = formatYOLOv5(input_image);
 
-    cv::dnn::blobFromImage(input_image, blob, 1. / 255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
+    cv::dnn::blobFromImage(formatted_image, blob, 1. / 255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
 
     // forward pass into network
     net.setInput(blob);
     vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
 
-    float x_factor = input_image.cols / INPUT_WIDTH;
-    float y_factor = input_image.rows / INPUT_HEIGHT;
+    float x_factor = formatted_image.cols / INPUT_WIDTH;
+    float y_factor = formatted_image.rows / INPUT_HEIGHT;
 
     float *data = (float *)outputs[0].data;
 
-    const int dimensions = 85;
+    const int dimensions = 85; // x,y,w,h,conf + num of class conf
     const int rows = 25200;
 
     vector<int> class_ids;
@@ -119,8 +109,8 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
         float confidence = data[4]; // conf in 4th address
         if (confidence >= DETECT_CONF_THRES)
         {
-            float *classes_scores = data + 5;                              // address of class scores start 5 addresses away
-            cv::Mat scores(1, className.size(), CV_32FC1, classes_scores); // create mat for score per detection
+            float *classes_scores = data + 5; // address of class scores start 5 addresses away
+            cv::Mat scores(1, class_list.size(), CV_32FC1, classes_scores); // create mat for score per detection
             cv::Point class_id;
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id); // find max score
@@ -157,7 +147,7 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
     }
 }
 
-void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
+void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection)
 {
     cout << "Creating Tracker" << "ID:" << track_count << "...\n";
     /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
@@ -166,26 +156,31 @@ void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
         new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
     else if (tracker_name=="KCF")
         new_tracker = cv::TrackerKCF::create();
-    new_tracker->init(frame, detection.bbox);
+
+    // Shrink detection bbox
+    cv::Rect scaled_bbox = scaleBBox(detection.bbox, SCALE_FACTOR);
+
+    new_tracker->init(shrunk_frame, scaled_bbox);
 
     Track new_track;
     new_track.track_id = track_count;
     new_track.tracker = new_tracker;
     new_track.class_id = detection.class_id;
-    new_track.confidence = detection.confidence;
-    new_track.bbox = detection.bbox;
+    new_track.confidence = detection.confidence;    
+    new_track.bbox = detection.bbox; // No need to enlarge
     new_track.num_hit = 1;
     new_track.num_miss = 0;
     multi_tracker.push_back(new_track);
     track_count++;
 }
 
-void MOTCorrelationTracker::getTrackersPred(cv::Mat &frame)
+void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
 {
     cout << "Getting Trackers Predictions...\n";
     for (Track &track : multi_tracker)
     {
-        bool isTracking = track.tracker->update(frame, track.bbox);
+        bool isTracking = track.tracker->update(shrunk_frame, track.bbox);
+        track.bbox = scaleBBox(track.bbox, 1.0 / SCALE_FACTOR); // Enlarge shrunked bbox
     }
 }
 
@@ -219,18 +214,6 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracke
         cv::rectangle(frame, cv::Point(track.bbox.x, track.bbox.y - 20), cv::Point(track.bbox.x + track.bbox.width, track.bbox.y), color, cv::FILLED);
         cv::putText(frame, class_list[track.class_id].c_str() + to_string(track.track_id), cv::Point(track.bbox.x, track.bbox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
-}
-
-// Computes IOU between two bounding bboxes
-double GetIOU(cv::Rect_<float> bb_test, cv::Rect_<float> bb_gt)
-{
-	float in = (bb_test & bb_gt).area();
-	float un = bb_test.area() + bb_gt.area() - in;
-
-	if (un < DBL_EPSILON)
-		return 0;
-
-	return (double)(in / un);
 }
 
 void MOTCorrelationTracker::associate()
@@ -312,7 +295,7 @@ void MOTCorrelationTracker::associate()
     }
 }
 
-void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& detector_output)
+void MOTCorrelationTracker::updateTrackers(cv::Mat& shrunk_frame, vector<Detection>& detector_output)
 {
     cout << "Updating Trackers...\n";
     // update matched trackers with assigned detections.
@@ -349,7 +332,7 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
     // create and initialise new trackers for unmatched detections
     for (int unmatched_id : unmatched_detections)
     {
-        createTracker(frame, detector_output[unmatched_id]);
+        createTracker(shrunk_frame, detector_output[unmatched_id]);
     }
 
     // num_miss++ for unmatched tracks
@@ -395,28 +378,32 @@ int MOTCorrelationTracker::runObjectTracking()
             break;
         }
 
+        // resize for track
+        cv::Mat shrunk_frame;
+        cv::resize(frame, shrunk_frame, cv::Size(), SCALE_FACTOR, SCALE_FACTOR, cv::INTER_AREA);
+
         if (total_frames == 10)
         {
             detect(frame, net, detector_output, class_list);
             int detections = detector_output.size();
             for (int i = 0; i < detections; ++i)
             {
-                createTracker(frame, detector_output[i]);
+                createTracker(shrunk_frame, detector_output[i]);
             }
         }
 
         else if (total_frames > 10 && total_frames%10 == 0)
         {
             detector_output.clear();
-            getTrackersPred(frame);
+            getTrackersPred(shrunk_frame);
             detect(frame, net, detector_output, class_list);
             associate();
-            updateTrackers(frame, detector_output);
+            updateTrackers(shrunk_frame, detector_output);
         }
 
         else
         {
-            getTrackersPred(frame);
+            getTrackersPred(shrunk_frame);
         }
 
         drawBBox(frame, multi_tracker, class_list);

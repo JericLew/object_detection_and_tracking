@@ -33,5 +33,6 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 add_executable( tracking_assignment 
     main.cpp
     MOTCorrelationTracker.cpp
-    Hungarian.cpp)
+    Hungarian.cpp
+    Utils.cpp)
 target_link_libraries( tracking_assignment ${OpenCV_LIBS} )
