@@ -39,14 +39,14 @@ private:
     // For Detection
     const float INPUT_WIDTH = 640.0;
     const float INPUT_HEIGHT = 640.0;
-    const float SCORE_THRESHOLD = 0.2;
-    const float NMS_THRESHOLD = 0.4;
-    const float CONFIDENCE_THRESHOLD = 0.4;
+    const float CLASS_CONF_THRES = 0.25;
+    const float NMS_THRES= 0.4;
+    const float DETECT_CONF_THRES= 0.4;
 
     // For Association
     const int MAX_AGE = 1;
     const int MIN_HITS = 3;
-    const double IOU_THRES = 0.3;
+    const float IOU_THRES = 0.3;
 
     // For Debug
     const int DEBUG_FLAG = 0;

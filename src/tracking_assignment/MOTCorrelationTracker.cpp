@@ -117,14 +117,14 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
     for (int i = 0; i < rows; ++i)
     {
         float confidence = data[4]; // conf in 4th address
-        if (confidence >= CONFIDENCE_THRESHOLD)
+        if (confidence >= DETECT_CONF_THRES)
         {
             float *classes_scores = data + 5;                              // address of class scores start 5 addresses away
             cv::Mat scores(1, className.size(), CV_32FC1, classes_scores); // create mat for score per detection
             cv::Point class_id;
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id); // find max score
-            if (max_class_score > SCORE_THRESHOLD)
+            if (max_class_score > CLASS_CONF_THRES)
             {
                 confidences.push_back(confidence); // add conf to vector
                 class_ids.push_back(class_id.x); // add class_id to vector
@@ -145,7 +145,7 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
     }
     // nms
     vector<int> nms_result;
-    cv::dnn::NMSBoxes(bboxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nms_result);
+    cv::dnn::NMSBoxes(bboxes, confidences, CLASS_CONF_THRES, NMS_THRES, nms_result);
     for (int i = 0; i < nms_result.size(); i++)
     {
         int idx = nms_result[i];
@@ -337,13 +337,13 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
         cout << endl;    
     }
 
-    int detIdx, trkIdx;
+    int detect_idx, track_idx;
     for (unsigned int i = 0; i < matched_pairs.size(); i++)
     {
-        trkIdx = matched_pairs[i].x;
-        detIdx = matched_pairs[i].y;
-        multi_tracker[trkIdx].num_hit++; // TODO change this to refresh track
-        multi_tracker[trkIdx].num_miss = 0;
+        track_idx = matched_pairs[i].x;
+        detect_idx = matched_pairs[i].y;
+        multi_tracker[track_idx].num_hit++; // TODO change this to refresh track
+        multi_tracker[track_idx].num_miss = 0;
     }
 
     // create and initialise new trackers for unmatched detections
@@ -360,7 +360,17 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
 
 
     // delete dead tracks
-    for (int i = multi_tracker.size(); i < multi_tracker.size(); i++)
+    if (DEBUG_FLAG)
+    {
+        cout << "num miss: ";
+        for (Track& track: multi_tracker) {
+            cout << track.num_miss << " ";
+        }
+        cout << endl;           
+    }
+ 
+
+    for (int i = 0; i < multi_tracker.size(); i++)
     {
         if (multi_tracker[i].num_miss > MAX_AGE)
         {
