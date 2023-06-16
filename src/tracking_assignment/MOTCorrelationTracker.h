@@ -48,6 +48,9 @@ private:
     const int MIN_HITS = 3;
     const double IOU_THRES = 0.3;
 
+    // For Debug
+    const int DEBUG_FLAG = 0;
+
     /********Data Structs********/
     struct Detection
     {

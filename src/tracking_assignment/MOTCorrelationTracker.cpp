@@ -17,7 +17,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
 
 void MOTCorrelationTracker::loadClassList(vector<string>& class_list)
 {
-    cout << "Loading Class List\n";
+    cout << "Loading Class List...\n";
     ifstream ifs(path_class_input);
     string line;
     while (getline(ifs, line))
@@ -31,13 +31,13 @@ void MOTCorrelationTracker::loadNet(cv::dnn::Net& net)
     cv::dnn::Net result = cv::dnn::readNet(path_net_input);
     if (cv::cuda::getCudaEnabledDeviceCount())
     {
-        cout << "Running with CUDA\n";
+        cout << "Running Detection with CUDA...\n";
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
         result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA_FP16);
     }
     else
     {
-        cout << "Running on CPU\n";
+        cout << "Running Detection on CPU...\n";
         result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     }
@@ -46,7 +46,7 @@ void MOTCorrelationTracker::loadNet(cv::dnn::Net& net)
 
 void MOTCorrelationTracker::initTracker()
 {
-    cout << "Init MOTCorrelationTracker\n";
+    cout << "********Init MOTCorrelationTracker********\n";
     // Open video input
     cap.open(path_video_input);
     if (!cap.isOpened())
@@ -89,7 +89,7 @@ cv::Mat MOTCorrelationTracker::formatYOLOv5(const cv::Mat &source)
 
 void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string> &className)
 {
-    cout << "Detecting\n";
+    cout << "Detecting...\n";
     cv::Mat blob;
 
     auto input_image = formatYOLOv5(image);
@@ -159,7 +159,7 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
 
 void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
 {
-    cout << "Creating Tracker" << "ID:" << track_count << "\n";
+    cout << "Creating Tracker" << "ID:" << track_count << "...\n";
     /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
     cv::Ptr<cv::Tracker> new_tracker;
     if (tracker_name == "MOSSE")
@@ -182,7 +182,7 @@ void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
 
 void MOTCorrelationTracker::getTrackersPred(cv::Mat &frame)
 {
-    cout << "Getting Trackers Predictions\n";
+    cout << "Getting Trackers Predictions...\n";
     for (Track &track : multi_tracker)
     {
         bool isTracking = track.tracker->update(frame, track.bbox);
@@ -191,7 +191,7 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat &frame)
 
 void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string> &class_list)
 {
-    cout << "Drawing BBox for detections\n";
+    cout << "Drawing BBox for detections...\n";
     int detections = detector_output.size();
     for (int i = 0; i < detections; ++i)
     {
@@ -207,7 +207,7 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector
 
 void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list)
 {
-    cout << "Drawing BBox from trackers\n";
+    cout << "Drawing BBox from trackers...\n";
     for (Track& track : multi_tracker)
     {
         if (track.num_hit < MIN_HITS)
@@ -235,7 +235,7 @@ double GetIOU(cv::Rect_<float> bb_test, cv::Rect_<float> bb_gt)
 
 void MOTCorrelationTracker::associate()
 {
-    cout << "Associating tracks and detections\n";
+    cout << "Associating...\n";
     unsigned int num_of_tracks = 0;
     unsigned int num_of_detections = 0;
 
@@ -261,11 +261,14 @@ void MOTCorrelationTracker::associate()
     assignment.clear();
     HungAlgo.Solve(iou_matrix, assignment);
 
-    cout << "Assignment contents: ";
-    for (const auto& i : assignment) {
-        cout << i << " ";
+    if (DEBUG_FLAG)
+    {
+        cout << "Assignment contents: ";
+        for (const auto& i : assignment) {
+            cout << i << " ";
+        }
+        cout << endl;        
     }
-    cout << endl;
 
     unmatched_tracks.clear();
     unmatched_detections.clear();
@@ -311,25 +314,29 @@ void MOTCorrelationTracker::associate()
 
 void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& detector_output)
 {
-    cout << "Updating Trackers\n";
+    cout << "Updating Trackers...\n";
     // update matched trackers with assigned detections.
     // each prediction is corresponding to a tracker
 
-    cout << "unmatched_tracks contents: ";
-    for (const auto& i : unmatched_tracks) {
-        cout << i << " ";
+    if (DEBUG_FLAG)
+    {
+        cout << "unmatched_tracks contents: ";
+        for (const auto& i : unmatched_tracks) {
+            cout << i << " ";
+        }
+        cout << endl;
+        cout << "unmatched_detections contents: ";
+        for (const auto& i : unmatched_detections) {
+            cout << i << " ";
+        }
+        cout << endl;
+        cout << "matched_pairs contents: ";
+        for (const auto& i : matched_pairs) {
+            cout << i << " ";
+        }
+        cout << endl;    
     }
-    cout << endl;
-    cout << "unmatched_detections contents: ";
-    for (const auto& i : unmatched_detections) {
-        cout << i << " ";
-    }
-    cout << endl;
-    cout << "matched_pairs contents: ";
-    for (const auto& i : matched_pairs) {
-        cout << i << " ";
-    }
-    cout << endl;
+
     int detIdx, trkIdx;
     for (unsigned int i = 0; i < matched_pairs.size(); i++)
     {
@@ -338,19 +345,19 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
         multi_tracker[trkIdx].num_hit++; // TODO change this to refresh track
         multi_tracker[trkIdx].num_miss = 0;
     }
-    cout << "test1\n";
+
     // create and initialise new trackers for unmatched detections
     for (int unmatched_id : unmatched_detections)
     {
         createTracker(frame, detector_output[unmatched_id]);
     }
-    cout << "test2\n";
+
     // num_miss++ for unmatched tracks
     for (int unmatched_id : unmatched_tracks)
     {
         multi_tracker[unmatched_id].num_miss++;
     }
-    cout << "test3\n";
+
 
     // delete dead tracks
     for (int i = multi_tracker.size(); i < multi_tracker.size(); i++)
@@ -360,8 +367,6 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
             multi_tracker.erase(multi_tracker.begin() + i);
         }
     }
-    cout << "test4\n";
-
 }
 
 int MOTCorrelationTracker::runObjectTracking()
@@ -376,7 +381,7 @@ int MOTCorrelationTracker::runObjectTracking()
 
         if (frame.empty())
         {
-            cout << "End of stream\n";
+            cout << "********End of stream********\n";
             break;
         }
 
@@ -409,18 +414,19 @@ int MOTCorrelationTracker::runObjectTracking()
         cv::imshow("Window", frame);
         out.write(frame);
 
-
-        std::cout << "Tracker contents: ";
-        for (const Track& track : multi_tracker) {
-            std::cout << track.track_id << " ";
+        if (DEBUG_FLAG)
+        {
+            cout << "Tracker contents: ";
+            for (const Track& track : multi_tracker) {
+                cout << track.track_id << " ";
+            }
+            cout << endl;            
         }
-        std::cout << std::endl;
-
 
         if (cv::waitKey(1) != -1)
         {
             cap.release();
-            cout << "finished by user\n";
+            cout << "********Ended by User********\n";
             break;
         }
 
