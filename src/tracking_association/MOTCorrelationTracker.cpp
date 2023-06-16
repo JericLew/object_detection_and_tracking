@@ -1,5 +1,11 @@
 #include "MOTCorrelationTracker.h"
 
+/*
+TODO
+BUG 1: KCF dies and slows down when things exit frame
+    Symptom 1: Shrunk prediction box from KCF is MASSIVE
+*/
+
 using namespace std;
 
 MOTCorrelationTracker::MOTCorrelationTracker(){}
@@ -181,7 +187,19 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
     cout << "Getting Trackers Predictions...\n";
     for (Track &track : multi_tracker)
     {
-        bool isTracking = track.tracker->update(shrunk_frame, track.bbox);
+        bool track_status = track.tracker->update(shrunk_frame, track.bbox); // TODO prolly return false here then we do smt
+
+        if (!track_status)
+        {
+            track.bbox.x = 0;
+            track.bbox.y = 0;
+            track.bbox.width = 0;
+            track.bbox.height = 0;
+        } 
+        if (DEBUG_FLAG)
+        {
+        }
+        cout << "Track Status " << track_status << endl;
         cout << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
         track.bbox = scaleBBox(track.bbox, 1.0 / SCALE_FACTOR); // Enlarge shrunked bbox
     }
