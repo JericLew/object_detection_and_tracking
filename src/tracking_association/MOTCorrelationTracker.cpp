@@ -160,6 +160,8 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
     // Shrink detection bbox
     cv::Rect scaled_bbox = scaleBBox(detection.bbox, SCALE_FACTOR);
 
+    cout << scaled_bbox.x << ' ' << scaled_bbox.y << ' ' << scaled_bbox.width << ' ' << scaled_bbox.height << endl;
+
     new_tracker->init(shrunk_frame, scaled_bbox);
 
     Track new_track;
@@ -167,7 +169,7 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
     new_track.tracker = new_tracker;
     new_track.class_id = detection.class_id;
     new_track.confidence = detection.confidence;    
-    new_track.bbox = detection.bbox; // No need to enlarge
+    new_track.bbox = detection.bbox;
     new_track.num_hit = 1;
     new_track.num_miss = 0;
     multi_tracker.push_back(new_track);
@@ -180,6 +182,7 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
     for (Track &track : multi_tracker)
     {
         bool isTracking = track.tracker->update(shrunk_frame, track.bbox);
+        cout << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
         track.bbox = scaleBBox(track.bbox, 1.0 / SCALE_FACTOR); // Enlarge shrunked bbox
     }
 }
