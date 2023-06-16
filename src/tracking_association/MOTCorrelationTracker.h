@@ -10,9 +10,10 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/tracking/tracking_legacy.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "Hungarian.h"
-
+#include "Utils.h"
 
 using namespace std;
 
@@ -42,6 +43,7 @@ private:
     const float CLASS_CONF_THRES = 0.25;
     const float NMS_THRES= 0.4;
     const float DETECT_CONF_THRES= 0.4;
+    const double SCALE_FACTOR = 1.0 / 3.0;
 
     // For Association
     const int MAX_AGE = 1;
@@ -107,7 +109,6 @@ private:
     void loadNet(cv::dnn::Net &net);
 
     // For Detection
-    cv::Mat formatYOLOv5(const cv::Mat &source);
     void detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection> &output, const vector<string> &className);
     
     // For Tracking
