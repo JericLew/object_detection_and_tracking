@@ -2,6 +2,8 @@
 
 int main(int argc, char *argv[])
 {
+    int64 start = cv::getTickCount();
+
     // program input parameters
     string directory_name;
     string source_path;
@@ -23,6 +25,11 @@ int main(int argc, char *argv[])
     tracker.inputPaths(directory_name, source_path, tracker_name);
     tracker.initTracker();
     tracker.runObjectTracking();
+
+    int64 end = cv::getTickCount();
+    double elapsedTime = (end - start) / cv::getTickFrequency();
+    cout << "Total Elapsed Time: " << elapsedTime << " s" << std::endl;
+    cout << endl;
 
     return 0;
 }

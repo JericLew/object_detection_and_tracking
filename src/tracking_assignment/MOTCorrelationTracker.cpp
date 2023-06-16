@@ -9,7 +9,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
 {
     // Concatenate the directory name with another string
     path_video_input = source_path;
-    path_video_output = directory_name + "video_output_c++/track_output.mp4";
+    path_video_output = directory_name + "video_output_c++/track_ass_output.mp4";
     path_class_input = directory_name + "classes/classes.txt";
     path_net_input = directory_name + "models/yolov5s.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;
@@ -18,6 +18,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
 
 void MOTCorrelationTracker::load_class_list(vector<string>& class_list)
 {
+    cout << "Loading Class List\n";
     ifstream ifs(path_class_input);
     string line;
     while (getline(ifs, line))
@@ -46,6 +47,7 @@ void MOTCorrelationTracker::load_net(cv::dnn::Net& net)
 
 void MOTCorrelationTracker::initTracker()
 {
+    cout << "Init MOTCorrelationTracker\n";
     // Open video input
     cap.open(path_video_input);
     if (!cap.isOpened())
@@ -71,6 +73,9 @@ void MOTCorrelationTracker::initTracker()
 
     // Load net
     load_net(net);
+
+    cv::namedWindow("Window", cv::WINDOW_NORMAL);
+    cv::resizeWindow("Resized_Window", 1920, 1080);
 }
 
 cv::Mat MOTCorrelationTracker::format_yolov5(const cv::Mat &source)
@@ -85,6 +90,7 @@ cv::Mat MOTCorrelationTracker::format_yolov5(const cv::Mat &source)
 
 void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string> &className)
 {
+    cout << "Detecting\n";
     cv::Mat blob;
 
     auto input_image = format_yolov5(image);
@@ -154,6 +160,7 @@ void MOTCorrelationTracker::detect(cv::Mat &image, cv::dnn::Net &net, vector<Det
 
 void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
 {
+    cout << "Creating Tracker" << "ID:" << track_count << "\n";
     /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
     cv::Ptr<cv::Tracker> new_tracker;
     if (tracker_name == "MOSSE")
@@ -176,6 +183,7 @@ void MOTCorrelationTracker::createTracker(cv::Mat &frame, Detection& detection)
 
 void MOTCorrelationTracker::getTrackersPred(cv::Mat &frame)
 {
+    cout << "Getting Trackers Predictions\n";
     for (Track &track : multi_tracker)
     {
         bool isTracking = track.tracker->update(frame, track.box);
@@ -184,6 +192,7 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat &frame)
 
 void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string> &class_list)
 {
+    cout << "Drawing BBox for detections\n";
     int detections = detector_output.size();
     for (int i = 0; i < detections; ++i)
     {
@@ -199,6 +208,7 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector
 
 void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list)
 {
+    cout << "Drawing BBox from trackers\n";
     for (Track& track : multi_tracker)
     {
         if (track.num_hit < min_hits)
@@ -210,71 +220,6 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracke
         cv::rectangle(frame, cv::Point(track.box.x, track.box.y - 20), cv::Point(track.box.x + track.box.width, track.box.y), color, cv::FILLED);
         cv::putText(frame, class_list[track.class_id].c_str() + to_string(track.track_id), cv::Point(track.box.x, track.box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
-}
-
-int MOTCorrelationTracker::runObjectTracking()
-{
-    cv::Mat frame;
-
-    while (true)
-    {
-        auto start = chrono::high_resolution_clock::now();
-
-        cap.read(frame);
-
-        if (frame.empty())
-        {
-            cout << "End of stream\n";
-            break;
-        }
-
-        if (total_frames == 10)
-        {
-            detect(frame, net, detector_output, class_list);
-            int detections = detector_output.size();
-            for (int i = 0; i < detections; ++i)
-            {
-                createTracker(frame, detector_output[i]);
-            }
-        }
-
-        else if (total_frames > 10 && total_frames%10 == 0)
-        {
-            detector_output.clear();
-            getTrackersPred(frame);
-            detect(frame, net, detector_output, class_list);
-            associate();
-            updateTrackers(frame, detector_output);
-            cout << "hi\n";
-        }
-
-        else
-        {
-            getTrackersPred(frame);
-        }
-
-        drawBBox(frame, multi_tracker, class_list);
-        total_frames++;
-        cv::imshow("Window", frame);
-        out.write(frame);
-
-        if (cv::waitKey(1) != -1)
-        {
-            cap.release();
-            cout << "finished by user\n";
-            break;
-        }
-
-        auto end = chrono::high_resolution_clock::now();
-        auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-        cout << "Time taken in ms: " << time_taken << endl;
-    }
-
-    cout << "Total frames: " << total_frames << "\n";
-    cap.release();
-    out.release();
-    cv::destroyAllWindows();
-    return 0;
 }
 
 // Computes IOU between two bounding boxes
@@ -291,6 +236,7 @@ double GetIOU(cv::Rect_<float> bb_test, cv::Rect_<float> bb_gt)
 
 void MOTCorrelationTracker::associate()
 {
+    cout << "Associating tracks and detections\n";
     unsigned int num_of_tracks = 0;
     unsigned int num_of_detections = 0;
 
@@ -366,6 +312,7 @@ void MOTCorrelationTracker::associate()
 
 void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& detector_output)
 {
+    cout << "Updating Trackers\n";
     // update matched trackers with assigned detections.
     // each prediction is corresponding to a tracker
     int detIdx, trkIdx;
@@ -398,4 +345,77 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat &frame, vector<Detection>& de
         }
         it++;
     }
+}
+
+int MOTCorrelationTracker::runObjectTracking()
+{
+    cv::Mat frame;
+
+    while (true)
+    {
+        int64 start = cv::getTickCount();
+
+        cap.read(frame);
+
+        if (frame.empty())
+        {
+            cout << "End of stream\n";
+            break;
+        }
+
+        if (total_frames == 10)
+        {
+            detect(frame, net, detector_output, class_list);
+            int detections = detector_output.size();
+            for (int i = 0; i < detections; ++i)
+            {
+                createTracker(frame, detector_output[i]);
+            }
+        }
+
+        else if (total_frames > 10 && total_frames%10 == 0)
+        {
+            detector_output.clear();
+            getTrackersPred(frame);
+            detect(frame, net, detector_output, class_list);
+            associate();
+            updateTrackers(frame, detector_output);
+        }
+
+        else
+        {
+            getTrackersPred(frame);
+        }
+
+        drawBBox(frame, multi_tracker, class_list);
+        total_frames++;
+        cv::imshow("Window", frame);
+        out.write(frame);
+
+
+        std::cout << "Tracker contents: ";
+        for (const Track& track : multi_tracker) {
+            std::cout << track.track_id << " ";
+        }
+        std::cout << std::endl;
+
+
+        if (cv::waitKey(1) != -1)
+        {
+            cap.release();
+            cout << "finished by user\n";
+            break;
+        }
+
+        int64 end = cv::getTickCount();
+        double elapsedTime = (end - start) * 1000 / cv::getTickFrequency();
+        cout << "Elapsed Time: " << elapsedTime << " ms" << std::endl;
+        cout << endl;
+    }
+
+    cout << "Total frames: " << total_frames << "\n";
+    cap.release();
+    out.release();
+    cv::destroyAllWindows();
+    return 0;
 }
