@@ -25,31 +25,35 @@ public:
     int runObjectTracking();
 
 private:
-    // path to files
+    /********User Input********/
     string path_video_input;
     string path_video_output;
     string path_class_input;
     string path_net_input;
     string tracker_name;
 
-    // constants
+    /********Constants********/
+    // For Drawing BBoxes
     const vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+    
+    // For Detection
     const float INPUT_WIDTH = 640.0;
     const float INPUT_HEIGHT = 640.0;
     const float SCORE_THRESHOLD = 0.2;
     const float NMS_THRESHOLD = 0.4;
     const float CONFIDENCE_THRESHOLD = 0.4;
 
-    int max_age = 1;
-    int min_hits = 3;
-    double iouThreshold = 0.3;
+    // For Association
+    const int MAX_AGE = 1;
+    const int MIN_HITS = 3;
+    const double IOU_THRES = 0.3;
 
-    // structs
+    /********Data Structs********/
     struct Detection
     {
         int class_id;
         float confidence;
-        cv::Rect box;
+        cv::Rect bbox;
     };
 
     struct Track
@@ -58,50 +62,60 @@ private:
         int track_id;
         int class_id;
         float confidence;
-        cv::Rect box;
+        cv::Rect bbox;
         int num_hit;
         int num_miss;
     };
 
-    // Data Storage
-    vector<Track> multi_tracker;
+    /********Data Storage********/
+    // For Detections
     vector<Detection> detector_output;
     vector<string> class_list;
 
-    vector<vector<double>> iouMatrix;
+    // For Tracking
+    vector<Track> multi_tracker;
+
+    // For Association
+    vector<vector<double>> iou_matrix;
     vector<int> assignment;
+    set<int> unmatched_detections;
+    set<int> unmatched_tracks;
+    set<int> all_detections;
+    set<int> matched_detections;
+    vector<cv::Point> matched_pairs;
 
-    set<int> unmatchedDetections;
-    set<int> unmatchedTracks;
-    set<int> allItems;
-    set<int> matchedItems;
-    vector<cv::Point> matchedPairs;
-
-    // video input details
+    /********Video Input Details********/
     double input_fps;
     int fw;
     int fh;
 
-    // variables
+    /********Counters********/
     int track_count = 0;
     int total_frames = 0;
 
-    // init capture, writer and network
+    /********Video and DNN Init********/
     cv::VideoCapture cap;
     cv::VideoWriter out;
     cv::dnn::Net net;
 
-    // methods
-    void load_class_list(vector<string> &class_list);
-    void load_net(cv::dnn::Net &net);
-    cv::Mat format_yolov5(const cv::Mat &source);
+    /********Methods********/
+    // For Init of MOTCorrelationTracker
+    void loadClassList(vector<string> &class_list);
+    void loadNet(cv::dnn::Net &net);
+
+    // For Detection
+    cv::Mat formatYOLOv5(const cv::Mat &source);
     void detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection> &output, const vector<string> &className);
     
+    // For Tracking
     void createTracker(cv::Mat &frame, Detection& detection);
     void getTrackersPred(cv::Mat &frame);
+
+    // For Association
     void associate();
     void updateTrackers(cv::Mat &frame, vector<Detection>& detector_output);
 
+    // For Drawing BBoxes
     void drawBBox(cv::Mat &frame, vector<Detection> &output, const vector<string> &class_list);
     void drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list);
 };
