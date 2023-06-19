@@ -1,5 +1,11 @@
 #include "MOTCorrelationTracker.h"
 
+/*
+TODO
+BUG 1: KCF dies and slows down when things exit frame
+    Symptom 1: Shrunk prediction box from KCF is MASSIVE
+*/
+
 using namespace std;
 
 MOTCorrelationTracker::MOTCorrelationTracker(){}
@@ -160,8 +166,6 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
     // Shrink detection bbox
     cv::Rect scaled_bbox = scaleBBox(detection.bbox, SCALE_FACTOR);
 
-    cout << scaled_bbox.x << ' ' << scaled_bbox.y << ' ' << scaled_bbox.width << ' ' << scaled_bbox.height << endl;
-
     new_tracker->init(shrunk_frame, scaled_bbox);
 
     Track new_track;
@@ -179,10 +183,25 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
 void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
 {
     cout << "Getting Trackers Predictions...\n";
-    for (Track &track : multi_tracker)
+    for (int i = 0; i < multi_tracker.size(); i++)
     {
-        bool isTracking = track.tracker->update(shrunk_frame, track.bbox);
-        cout << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
+        Track& track = multi_tracker[i];
+        bool track_status = track.tracker->update(shrunk_frame, track.bbox); // TODO prolly return false here then we do smt
+
+        if (!track_status)
+        {
+            track.bbox.x = 0;
+            track.bbox.y = 0;
+            track.bbox.width = 0;
+            track.bbox.height = 0;
+        } 
+
+        if (DEBUG_FLAG)
+        {
+            cout << "Track Status " << track_status << endl;
+            cout << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
+        }
+
         track.bbox = scaleBBox(track.bbox, 1.0 / SCALE_FACTOR); // Enlarge shrunked bbox
     }
 }
@@ -206,8 +225,9 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector
 void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list)
 {
     cout << "Drawing BBox from trackers...\n";
-    for (Track& track : multi_tracker)
+    for (int i = 0; i < multi_tracker.size(); i++)
     {
+        Track& track = multi_tracker[i];
         if (track.num_hit < MIN_HITS)
         {
             continue;
@@ -349,7 +369,9 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat& shrunk_frame, vector<Detecti
     if (DEBUG_FLAG)
     {
         cout << "num miss: ";
-        for (Track& track: multi_tracker) {
+        for (int i = 0; i < multi_tracker.size(); i++)
+        {
+            Track& track = multi_tracker[i];
             cout << track.num_miss << " ";
         }
         cout << endl;           
@@ -417,7 +439,9 @@ int MOTCorrelationTracker::runObjectTracking()
         if (DEBUG_FLAG)
         {
             cout << "Tracker contents: ";
-            for (const Track& track : multi_tracker) {
+            for (int i = 0; i < multi_tracker.size(); i++)
+            {
+                Track& track = multi_tracker[i];
                 cout << track.track_id << " ";
             }
             cout << endl;            

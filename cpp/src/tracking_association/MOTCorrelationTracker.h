@@ -51,7 +51,7 @@ private:
     const float IOU_THRES = 0.3;
 
     // For Debug
-    const int DEBUG_FLAG = 0;
+    const int DEBUG_FLAG = 1;
 
     /********Data Structs********/
     struct Detection
