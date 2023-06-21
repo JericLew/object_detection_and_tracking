@@ -2,8 +2,6 @@
 
 /*
 TODO
-BUG 1: KCF dies and slows down when things exit frame
-    Symptom 1: Shrunk prediction box from KCF is MASSIVE
 */
 
 using namespace std;
@@ -50,9 +48,30 @@ void MOTCorrelationTracker::loadNet(cv::dnn::Net& net)
     net = result;
 }
 
+void MOTCorrelationTracker::warmupNet(cv::dnn::Net& net)
+{
+    cout << "Warming Up Detector" << endl;
+    int64 start_warmup = cv::getTickCount();
+
+    cv::Mat dummy_image = cv::Mat::zeros(cv::Size(INPUT_WIDTH, INPUT_HEIGHT), CV_8UC3);  // Create a dummy black image
+
+    // Preprocess the dummy image
+    cv::Mat dummy_blob;
+    cv::dnn::blobFromImage(dummy_image, dummy_blob, 1.0, cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
+
+    // Warm up the network by performing a forward pass
+    net.setInput(dummy_blob);
+    vector<cv::Mat> dummy_outputs;
+    net.forward(dummy_outputs, net.getUnconnectedOutLayersNames());
+
+    int64 end_warmup = cv::getTickCount();
+    double warmup_Time = (end_warmup - start_warmup) * 1000 / cv::getTickFrequency();
+    cout << "Warm-Up Time: " << warmup_Time << " ms" <<endl; 
+}
+
 void MOTCorrelationTracker::initTracker()
 {
-    cout << "********Init MOTCorrelationTracker********\n";
+    cout << "********Start Init MOTCorrelationTracker********\n";
     // Open video input
     cap.open(path_video_input);
     if (!cap.isOpened())
@@ -73,19 +92,19 @@ void MOTCorrelationTracker::initTracker()
         cerr << "Error creating VideoWriter\n";
     }
 
-    // Load class list
     loadClassList(class_list);
-
-    // Load net
     loadNet(net);
+    warmupNet(net);
 
     cv::namedWindow("Window", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Resized_Window", 1920, 1080);
+    cv::resizeWindow("Window", 1920, 1080);
+    cout << "********End Init MOTCorrelationTracker********\n\n";
 }
 
 void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string>& class_list)
 {
     cout << "Detecting...\n";
+
     cv::Mat blob;
 
     cv::Mat formatted_image = formatYOLOv5(input_image);
@@ -153,11 +172,9 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
     }
 }
 
-void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection)
+void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker)
 {
-    cout << "Creating Tracker" << "ID:" << track_count << "...\n";
     /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
-    cv::Ptr<cv::Tracker> new_tracker;
     if (tracker_name == "MOSSE")
         new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
     else if (tracker_name=="KCF")
@@ -166,7 +183,15 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
     // Shrink detection bbox
     cv::Rect scaled_bbox = scaleBBox(detection.bbox, SCALE_FACTOR);
 
-    new_tracker->init(shrunk_frame, scaled_bbox);
+    new_tracker->init(shrunk_frame, scaled_bbox);    
+}
+
+void MOTCorrelationTracker::createTrack(cv::Mat& shrunk_frame, Detection& detection)
+{
+    cout << "Creating Track" << "ID:" << track_count << "...\n";
+
+    cv::Ptr<cv::Tracker> new_tracker;
+    createTracker(shrunk_frame, detection, new_tracker);
 
     Track new_track;
     new_track.track_id = track_count;
@@ -186,9 +211,8 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
     for (int i = 0; i < multi_tracker.size(); i++)
     {
         Track& track = multi_tracker[i];
-        bool track_status = track.tracker->update(shrunk_frame, track.bbox); // TODO prolly return false here then we do smt
-
-        if (!track_status)
+        bool track_status = track.tracker->update(shrunk_frame, track.bbox);
+        if (!track_status) // if track update failed, bbox = 0
         {
             track.bbox.x = 0;
             track.bbox.y = 0;
@@ -198,8 +222,8 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
 
         if (DEBUG_FLAG)
         {
-            cout << "Track Status " << track_status << endl;
-            cout << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
+            cout << "Track Status: " << (track_status ? "Found" : "Lost") << endl;
+            cout << "tlwh: " << track.bbox.x << ' ' << track.bbox.y << ' ' << track.bbox.width << ' ' << track.bbox.height << endl;
         }
 
         track.bbox = scaleBBox(track.bbox, 1.0 / SCALE_FACTOR); // Enlarge shrunked bbox
@@ -269,7 +293,7 @@ void MOTCorrelationTracker::associate()
 
     if (DEBUG_FLAG)
     {
-        cout << "Assignment contents: ";
+        cout << "assignment: ";
         for (const auto& i : assignment) {
             cout << i << " ";
         }
@@ -318,44 +342,52 @@ void MOTCorrelationTracker::associate()
     }
 }
 
-void MOTCorrelationTracker::updateTrackers(cv::Mat& shrunk_frame, vector<Detection>& detector_output)
+void MOTCorrelationTracker::updateTracks(cv::Mat& shrunk_frame, vector<Detection>& detector_output)
 {
-    cout << "Updating Trackers...\n";
+    cout << "Updating Tracks...\n";
     // update matched trackers with assigned detections.
     // each prediction is corresponding to a tracker
 
     if (DEBUG_FLAG)
     {
-        cout << "unmatched_tracks contents: ";
+        cout << "unmatched_tracks: ";
         for (const auto& i : unmatched_tracks) {
             cout << i << " ";
         }
         cout << endl;
-        cout << "unmatched_detections contents: ";
+        cout << "unmatched_detections: ";
         for (const auto& i : unmatched_detections) {
             cout << i << " ";
         }
         cout << endl;
-        cout << "matched_pairs contents: ";
+        cout << "matched_pairs: ";
         for (const auto& i : matched_pairs) {
             cout << i << " ";
         }
         cout << endl;    
     }
 
-    int detect_idx, track_idx;
+    int detect_idx, track_idx; // for matched pairs TODO refresh track is wonky and can cause lost in track
     for (unsigned int i = 0; i < matched_pairs.size(); i++)
     {
         track_idx = matched_pairs[i].x;
         detect_idx = matched_pairs[i].y;
-        multi_tracker[track_idx].num_hit++; // TODO change this to refresh track
+        double iou_score = GetIOU(detector_output[detect_idx].bbox, multi_tracker[track_idx].bbox);
+        if (iou_score < REFRESH_IOU_THRES)
+        {
+        cv::Ptr<cv::Tracker> new_tracker;
+        createTracker(shrunk_frame, detector_output[detect_idx], new_tracker);
+        multi_tracker[track_idx].tracker = new_tracker;
+        }
+
+        multi_tracker[track_idx].num_hit++; 
         multi_tracker[track_idx].num_miss = 0;
     }
 
     // create and initialise new trackers for unmatched detections
     for (int unmatched_id : unmatched_detections)
     {
-        createTracker(shrunk_frame, detector_output[unmatched_id]);
+        createTrack(shrunk_frame, detector_output[unmatched_id]);
     }
 
     // num_miss++ for unmatched tracks
@@ -364,11 +396,9 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat& shrunk_frame, vector<Detecti
         multi_tracker[unmatched_id].num_miss++;
     }
 
-
-    // delete dead tracks
     if (DEBUG_FLAG)
     {
-        cout << "num miss: ";
+        cout << "Num Miss: ";
         for (int i = 0; i < multi_tracker.size(); i++)
         {
             Track& track = multi_tracker[i];
@@ -377,7 +407,7 @@ void MOTCorrelationTracker::updateTrackers(cv::Mat& shrunk_frame, vector<Detecti
         cout << endl;           
     }
  
-
+    // delete dead tracks
     for (int i = 0; i < multi_tracker.size(); i++)
     {
         if (multi_tracker[i].num_miss > MAX_AGE)
@@ -393,7 +423,7 @@ int MOTCorrelationTracker::runObjectTracking()
 
     while (true)
     {
-        int64 start = cv::getTickCount();
+        int64 start_loop = cv::getTickCount();
 
         cap.read(frame);
 
@@ -413,17 +443,17 @@ int MOTCorrelationTracker::runObjectTracking()
             int detections = detector_output.size();
             for (int i = 0; i < detections; ++i)
             {
-                createTracker(shrunk_frame, detector_output[i]);
+                createTrack(shrunk_frame, detector_output[i]);
             }
         }
 
-        else if (total_frames > 10 && total_frames%10 == 0)
+        else if (total_frames > 10 && total_frames%10== 0)
         {
             detector_output.clear();
             getTrackersPred(shrunk_frame);
             detect(frame, net, detector_output, class_list);
             associate();
-            updateTrackers(shrunk_frame, detector_output);
+            updateTracks(shrunk_frame, detector_output);
         }
 
         else
@@ -438,7 +468,7 @@ int MOTCorrelationTracker::runObjectTracking()
 
         if (DEBUG_FLAG)
         {
-            cout << "Tracker contents: ";
+            cout << "Tracker Contents: ";
             for (int i = 0; i < multi_tracker.size(); i++)
             {
                 Track& track = multi_tracker[i];
@@ -454,9 +484,9 @@ int MOTCorrelationTracker::runObjectTracking()
             break;
         }
 
-        int64 end = cv::getTickCount();
-        double elapsedTime = (end - start) * 1000 / cv::getTickFrequency();
-        cout << "Elapsed Time: " << elapsedTime << " ms" << std::endl;
+        int64 end_loop = cv::getTickCount();
+        double elasped_time_loop = (end_loop - start_loop) * 1000 / cv::getTickFrequency();
+        cout << "Elapsed Time: " << elasped_time_loop << " ms" << std::endl;
         cout << endl;
     }
 

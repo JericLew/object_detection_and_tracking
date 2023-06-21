@@ -26,6 +26,11 @@ public:
     int runObjectTracking();
 
 private:
+    /********Control Flags********/
+    const int STATUS_FLAG = 1;
+    // const int TIMER_FLAG = 1; // TODO TIMER TO TEST PERF
+    const int DEBUG_FLAG = 1;
+
     /********User Input********/
     string path_video_input;
     string path_video_output;
@@ -48,10 +53,8 @@ private:
     // For Association
     const int MAX_AGE = 1;
     const int MIN_HITS = 3;
-    const float IOU_THRES = 0.3;
-
-    // For Debug
-    const int DEBUG_FLAG = 1;
+    const float IOU_THRES = 0.3; // IoU Thres to reject assocations
+    const float REFRESH_IOU_THRES = 0.80; // IoU Thres to replace old tracker with new for current track
 
     /********Data Structs********/
     struct Detection
@@ -107,17 +110,19 @@ private:
     // For Init of MOTCorrelationTracker
     void loadClassList(vector<string> &class_list);
     void loadNet(cv::dnn::Net &net);
+    void warmupNet(cv::dnn::Net& net);
 
     // For Detection
     void detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection> &output, const vector<string> &className);
     
     // For Tracking
-    void createTracker(cv::Mat &frame, Detection& detection);
+    void createTrack(cv::Mat &frame, Detection& detection);
+    void createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker);
     void getTrackersPred(cv::Mat &frame);
 
     // For Association
     void associate();
-    void updateTrackers(cv::Mat &frame, vector<Detection>& detector_output);
+    void updateTracks(cv::Mat &frame, vector<Detection>& detector_output);
 
     // For Drawing BBoxes
     void drawBBox(cv::Mat &frame, vector<Detection> &output, const vector<string> &class_list);
