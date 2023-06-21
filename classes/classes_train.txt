@@ -1,0 +1,10 @@
+ferry
+buoy
+Vessel
+speedboat
+boat
+kayak
+sailboat
+swimmer
+aerial
+other

@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     cv::Mat frame;
     
     while (cap.read(frame)) {
-        std::string frame_name = output_path + video_name_no_ext + "_frame_" + std::to_string(frameCount) + ".jpg";
+        std::string frame_name = output_path + video_name_no_ext + "_" + std::to_string(frameCount) + ".jpg";
         cv::imwrite(frame_name, frame);
         
         frameCount++;
