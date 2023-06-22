@@ -87,6 +87,16 @@ Warning: using --opset 11 for exporting to ONNX
 python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 ```
 
+Warning: using --batch-size 12 or lower for training
+```sh
+python train.py --img 640 --epochs 200 --data trial.yaml --weights yolov5s.pt --batch-size 12 --device 0
+```
+
+For detect
+```sh
+python detect.py --weights ~/yolov5/run/train/5_epoch_all/weights/best.pt --source ~/tracking_ws/videos/video1.avi --view-img
+```
+
 ## Usage
 
 To be updated, change CMake to include directory

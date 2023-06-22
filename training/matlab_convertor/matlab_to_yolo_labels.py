@@ -50,6 +50,7 @@ num_fields = len(field_names)
 
 fw = 1920
 fh = 1080
+count = 0
 
 for frame_num in range(struct_data.shape[1]):
     output_txt = output_folder_path + video_name + '_' + str(frame_num) + '.txt'
@@ -73,4 +74,7 @@ for frame_num in range(struct_data.shape[1]):
                 continue
             line = ' '.join(extracted_data)
             file.write(line + '\n')
-    print("Conversion to TXT complete.")
+    count += 1
+
+print("Conversion to TXT complete.")
+print(f"Total extracted: {count}")

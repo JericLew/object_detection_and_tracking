@@ -26,8 +26,8 @@ private:
     const float INPUT_WIDTH = 640.0;
     const float INPUT_HEIGHT = 640.0;
     const float SCORE_THRESHOLD = 0.2;
-    const float NMS_THRESHOLD = 0.4;
-    const float CONFIDENCE_THRESHOLD = 0.4;
+    const float NMS_THRESHOLD = 0.45;
+    const float CONFIDENCE_THRESHOLD = 0.25;
 
     // structs
     struct Detection
@@ -76,7 +76,7 @@ void ObjectDetector::load_class_list(std::vector<std::string> &class_list)
 
 void ObjectDetector::load_net(cv::dnn::Net &net)
 {   
-    cv::dnn::Net result = cv::dnn::readNet(path_net_input);
+    cv::dnn::Net result = cv::dnn::readNetFromONNX(path_net_input);
     if (cv::cuda::getCudaEnabledDeviceCount())
     {
         std::cout << "Running with CUDA\n";
@@ -98,8 +98,8 @@ ObjectDetector::ObjectDetector(const std::string& directoryName, const std::stri
     // Concatenate the directory name with another string
     path_video_input = sourcePath;
     path_video_output = directoryName + "output/detect_cpp.mp4";
-    path_class_input = directoryName + "classes/classes.txt";
-    path_net_input = directoryName + "models/yolov5s.onnx";
+    path_class_input = directoryName + "classes/classes_train.txt";
+    path_net_input = directoryName + "models/best_all.onnx";
 
     // Open video input
     cap.open(path_video_input);
@@ -130,29 +130,28 @@ ObjectDetector::ObjectDetector(const std::string& directoryName, const std::stri
     load_net(net);
 }
 
-cv::Mat ObjectDetector::format_yolov5(const cv::Mat& source) {
-    int col = source.cols;
-    int row = source.rows;
-    int _max = MAX(col, row);
-    cv::Mat result = cv::Mat::zeros(_max, _max, CV_8UC3);
-    source.copyTo(result(cv::Rect(0, 0, col, row)));
-    return result;
-}
+// cv::Mat ObjectDetector::format_yolov5(const cv::Mat& source) {
+//     int col = source.cols;
+//     int row = source.rows;
+//     int _max = MAX(col, row);
+//     cv::Mat result = cv::Mat::zeros(_max, _max, CV_8UC3);
+//     source.copyTo(result(cv::Rect(0, 0, col, row)));
+//     return result;
+// }
 
 void ObjectDetector::detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detection>& output, const std::vector<std::string>& className) {
     cv::Mat blob;
 
-    auto input_image = format_yolov5(image);
-    
-    cv::dnn::blobFromImage(input_image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
+    // auto input_image = format_yolov5(image);
+    cv::dnn::blobFromImage(image, blob, 1./255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
 
     // forward pass into network
     net.setInput(blob);
     std::vector<cv::Mat> outputs;
     net.forward(outputs, net.getUnconnectedOutLayersNames());
 
-    float x_factor = input_image.cols / INPUT_WIDTH;
-    float y_factor = input_image.rows / INPUT_HEIGHT;
+    float x_factor = image.cols / INPUT_WIDTH;
+    float y_factor = image.rows / INPUT_HEIGHT;
     
     float *data = (float *)outputs[0].data;
 
@@ -172,7 +171,7 @@ void ObjectDetector::detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detec
             cv::Point class_id;
             double max_class_score;
             minMaxLoc(scores, 0, &max_class_score, 0, &class_id); // find max score
-            if (max_class_score > SCORE_THRESHOLD) {
+            // if (max_class_score > SCORE_THRESHOLD) {
 
                 confidences.push_back(confidence); // add conf to vector
                 class_ids.push_back(class_id.x); // add class_id to vector
@@ -187,7 +186,7 @@ void ObjectDetector::detect(cv::Mat& image, cv::dnn::Net& net, std::vector<Detec
                 int width = int(w * x_factor);
                 int height = int(h * y_factor);
                 boxes.push_back(cv::Rect(left, top, width, height));
-            }
+            // }
         }
         data += 85; // next detection (x,y,w,h,conf,80 class conf)
     }
@@ -216,7 +215,7 @@ void ObjectDetector::drawBBox(cv::Mat& frame, std::vector<Detection>& output, co
         const auto color = colors[classId % colors.size()];
         cv::rectangle(frame, box, color, 3);
         cv::rectangle(frame, cv::Point(box.x, box.y - 20), cv::Point(box.x + box.width, box.y), color, cv::FILLED);
-        cv::putText(frame, class_list[classId].c_str(), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        cv::putText(frame, class_list[classId].c_str() + std::to_string(detection.confidence), cv::Point(box.x, box.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
     }
 }
 int ObjectDetector::runObjectDetection()
