@@ -121,7 +121,7 @@ ObjectTracker::ObjectTracker(const std::string& directoryName, const std::string
 {
     // Concatenate the directory name with another string
     path_video_input = sourcePath;
-    path_video_output = directoryName + "video_output_c++/track_output.mp4";
+    path_video_output = directoryName + "output/track_cpp.mp4";
     path_class_input = directoryName + "classes/classes.txt";
     path_net_input = directoryName + "models/yolov5s.onnx";
 

@@ -12,7 +12,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
 {
     // Concatenate the directory name with another string
     path_video_input = source_path;
-    path_video_output = directory_name + "video_output_c++/track_ass_output.mp4";
+    path_video_output = directory_name + "output/track_ass_cpp.mp4";
     path_class_input = directory_name + "classes_train/classes.txt";
     path_net_input = directory_name + "models/best.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;

@@ -14,13 +14,13 @@ class objectTracker():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/video_input/video1.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/source/video1.avi') # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.fh = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"FPS: {self.fps}, Width: {self.fw}, Height: {self.fh}")
-        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/video_output/detect_tracker_output.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
+        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/ouput/tracker_py.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Detector init
         
