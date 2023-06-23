@@ -66,10 +66,22 @@ OpenCV and OpenCV contrib is required and has to be build from source if using C
 
    Open a terminal and export library path as per `-DCMAKE_INSTALL_PREFIX`
    ```sh
-   echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
-   echo 'export PYTHONPATH=/usr/local/lib/python3.8/site-packages/:$PYTHONPATH' >> ~/.bashrc
+   echo 'export LD_LIBRARY_PATH=~/opencv-4.5.4-linux/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+   echo 'export PYTHONPATH=~/opencv-4.5.4-linux/local/lib/python3.8/dist-packages/:$PYTHONPATH' >> ~/.bashrc
    source ~/.bashrc
    ```
+   
+### virtualenv
+Setup python virtual environment to install pyTorch and YOLO python packages
+
+```sh
+sudo apt-get install virtualenv
+cd ~/
+virtualenv env_train --system-site-packages
+echo 'export LD_LIBRARY_PATH=~/opencv-4.5.4-linux/local/lib:$LD_LIBRARY_PATH' >> ~/env_yolo/bin/activate
+echo 'export PYTHONPATH=~/opencv-4.5.4-linux/local/lib/python3.8/dist-packages/:$PYTHONPATH' >> ~/env_yolo/bin/activate
+source ~/env_yolo/bin/activate
+```
 
 ### pyTorch
 
