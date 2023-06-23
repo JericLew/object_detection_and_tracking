@@ -77,7 +77,7 @@ Setup python virtual environment to install pyTorch and YOLO python packages
 ```sh
 sudo apt-get install virtualenv
 cd ~/
-virtualenv env_train --system-site-packages
+virtualenv env_yolo --system-site-packages
 echo 'export LD_LIBRARY_PATH=~/opencv-4.5.4-linux/local/lib:$LD_LIBRARY_PATH' >> ~/env_yolo/bin/activate
 echo 'export PYTHONPATH=~/opencv-4.5.4-linux/local/lib/python3.8/dist-packages/:$PYTHONPATH' >> ~/env_yolo/bin/activate
 source ~/env_yolo/bin/activate
