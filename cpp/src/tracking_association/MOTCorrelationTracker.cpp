@@ -260,10 +260,11 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracke
 
         cv::Rect& bbox = track.bbox;
         int class_id = track.class_id;
+        int track_id = track.track_id;
         float confidence = track.confidence;
         string class_name = class_list[class_id];
         cv::Scalar color = colors[class_id % colors.size()];
-        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
+        std::string text_label = std::to_string(track_id)+ ": "  + class_name;
         cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
         cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
         cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
