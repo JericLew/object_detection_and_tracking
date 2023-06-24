@@ -38,6 +38,9 @@ private:
     /********Constants********/
     // For Drawing BBoxes
     const vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+    const float line_width = 3.0;
+    const float font_scale = line_width / 3.0f;
+    const float line_thickness = max(line_width - 1.0f, 1.0f);
 
     // For Detection
     const float INPUT_WIDTH = 640.0;
@@ -63,11 +66,6 @@ private:
     double input_fps;
     int fw;
     int fh;
-    
-    /********BBox Drawing Details********/
-    float line_width = 3.0;
-    float font_scale = line_width / 3.0f;
-    float line_thickness = max(line_width - 1.0f, 1.0f);
 
     /********Counters********/
     int total_frames = 0;
