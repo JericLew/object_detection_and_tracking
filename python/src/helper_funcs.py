@@ -107,7 +107,7 @@ def nms(in_boxes, in_confidences,in_class_ids, detect_conf_thres, nms_thres):
 
 def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
     class_list = []
-    with open("/home/jeric/tracking_ws/classes/classes.txt", "r") as f:
+    with open("/home/jeric/tracking_ws/classes/classes_train.txt", "r") as f:
         class_list = [cname.strip() for cname in f.readlines()]
 
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]

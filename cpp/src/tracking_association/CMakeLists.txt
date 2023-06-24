@@ -30,6 +30,8 @@ set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
+include_directories(../common)
+
 add_executable( tracking_association 
     main.cpp
     MOTCorrelationTracker.cpp
