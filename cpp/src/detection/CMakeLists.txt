@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project( detection )
+project( Detection )
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -29,6 +29,12 @@ enable_cxx_compiler_flag_if_supported("-Weffc++")
 set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 
 find_package( OpenCV REQUIRED )
+# Add include directories
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-add_executable( detection detection.cpp )
-target_link_libraries( detection ${OpenCV_LIBS} )
+include_directories(../common/)
+
+add_executable( Detection
+    Detection.cpp
+    ../common/Utils.cpp
+    main.cpp )
+target_link_libraries( Detection ${OpenCV_LIBS} )

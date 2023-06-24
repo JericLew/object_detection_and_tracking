@@ -1,6 +1,6 @@
 ferry
 buoy
-Vessel
+vessel
 speedboat
 boat
 kayak

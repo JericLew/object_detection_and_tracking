@@ -1,9 +1,5 @@
 #include "MOTCorrelationTracker.h"
 
-/*
-TODO
-*/
-
 using namespace std;
 
 MOTCorrelationTracker::MOTCorrelationTracker(){}
@@ -13,8 +9,8 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
     // Concatenate the directory name with another string
     path_video_input = source_path;
     path_video_output = directory_name + "output/track_ass_cpp.mp4";
-    path_class_input = directory_name + "classes_train/classes.txt";
-    path_net_input = directory_name + "models/best.onnx";
+    path_class_input = directory_name + "classes/classes_train.txt";
+    path_net_input = directory_name + "models/best_all.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;
     
 }
@@ -121,7 +117,8 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
 
     float *data = (float *)outputs[0].data;
 
-    const int dimensions = 85; // x,y,w,h,conf + num of class conf
+    const int dimensions = 5 + class_list.size(); // x,y,w,h,conf + num of class conf
+    cout << dimensions << endl;
     const int rows = 25200;
 
     vector<int> class_ids;
@@ -156,11 +153,11 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
                 bboxes.push_back(cv::Rect(left, top, width, height));
             }
         }
-        data += 85; // next detection (x,y,w,h,conf,80 class conf)
+        data += dimensions; // next detection (x,y,w,h,conf,num of class conf)
     }
     // nms
     vector<int> nms_result;
-    cv::dnn::NMSBoxes(bboxes, confidences, CLASS_CONF_THRES, NMS_THRES, nms_result);
+    cv::dnn::NMSBoxes(bboxes, confidences, DETECT_CONF_THRES, NMS_THRES, nms_result);
     for (int i = 0; i < nms_result.size(); i++)
     {
         int idx = nms_result[i];
@@ -230,19 +227,23 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
     }
 }
 
-void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string> &class_list)
+void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string>& class_list)
 {
     cout << "Drawing BBox for detections...\n";
     int detections = detector_output.size();
     for (int i = 0; i < detections; ++i)
     {
-        auto detection = detector_output[i];
-        auto bbox = detection.bbox;
-        auto classId = detection.class_id;
-        const auto color = colors[classId % colors.size()];
-        cv::rectangle(frame, bbox, color, 3);
-        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 20), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
-        cv::putText(frame, class_list[classId].c_str(), cv::Point(bbox.x, bbox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        Detection& detection = detector_output[i];
+        cv::Rect& bbox = detection.bbox;
+        int class_id = detection.class_id;
+        float confidence = detection.confidence;
+        string class_name = class_list[class_id];
+        cv::Scalar color = colors[class_id % colors.size()];
+        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
+
+        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
+        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
+        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
     }
 }
 
@@ -256,10 +257,16 @@ void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracke
         {
             continue;
         }
-        const auto color = colors[track.class_id % colors.size()];
-        cv::rectangle(frame, track.bbox, color, 3);
-        cv::rectangle(frame, cv::Point(track.bbox.x, track.bbox.y - 20), cv::Point(track.bbox.x + track.bbox.width, track.bbox.y), color, cv::FILLED);
-        cv::putText(frame, class_list[track.class_id].c_str() + to_string(track.track_id), cv::Point(track.bbox.x, track.bbox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+
+        cv::Rect& bbox = track.bbox;
+        int class_id = track.class_id;
+        float confidence = track.confidence;
+        string class_name = class_list[class_id];
+        cv::Scalar color = colors[class_id % colors.size()];
+        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
+        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
+        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
+        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
     }
 }
 
