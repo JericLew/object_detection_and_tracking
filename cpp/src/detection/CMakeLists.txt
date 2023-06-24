@@ -31,10 +31,10 @@ set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 find_package( OpenCV REQUIRED )
 # Add include directories
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-include_directories(../common)
+include_directories(../common/)
 
 add_executable( Detection
     Detection.cpp
-    Utils.cpp
+    ../common/Utils.cpp
     main.cpp )
 target_link_libraries( Detection ${OpenCV_LIBS} )

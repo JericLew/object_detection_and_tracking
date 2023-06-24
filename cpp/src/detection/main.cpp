@@ -1,4 +1,4 @@
-#include "new_detect.h"
+#include "Detection.h"
 
 int main(int argc, char *argv[])
 {

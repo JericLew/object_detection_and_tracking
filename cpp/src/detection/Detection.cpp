@@ -1,4 +1,4 @@
-#include "new_detect.h"
+#include "Detection.h"
 
 using namespace std;
 
@@ -116,7 +116,6 @@ void ObjectDetector::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Dete
     float *data = (float *)outputs[0].data;
 
     const int dimensions = 5 + class_list.size(); // x,y,w,h,conf + num of class conf
-    cout << dimensions << endl;
     const int rows = 25200;
 
     vector<int> class_ids;
@@ -167,19 +166,23 @@ void ObjectDetector::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Dete
     }
 }
 
-void ObjectDetector::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string> &class_list)
+void ObjectDetector::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string>& class_list)
 {
     cout << "Drawing BBox for detections...\n";
     int detections = detector_output.size();
     for (int i = 0; i < detections; ++i)
     {
-        auto detection = detector_output[i];
-        auto bbox = detection.bbox;
-        auto classId = detection.class_id;
-        const auto color = colors[classId % colors.size()];
-        cv::rectangle(frame, bbox, color, 3);
-        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 20), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
-        cv::putText(frame, class_list[classId].c_str() + std::to_string(detection.confidence), cv::Point(bbox.x, bbox.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+        Detection& detection = detector_output[i];
+        cv::Rect& bbox = detection.bbox;
+        int class_id = detection.class_id;
+        float confidence = detection.confidence;
+        string class_name = class_list[class_id];
+        cv::Scalar color = colors[class_id % colors.size()];
+        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
+
+        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
+        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
+        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
     }
 }
 

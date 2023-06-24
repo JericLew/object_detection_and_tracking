@@ -35,6 +35,6 @@ include_directories(../common)
 add_executable( tracking_association 
     main.cpp
     MOTCorrelationTracker.cpp
-    Hungarian.cpp
-    Utils.cpp)
+    ../common/Hungarian.cpp
+    ../common/Utils.cpp)
 target_link_libraries( tracking_association ${OpenCV_LIBS} )
