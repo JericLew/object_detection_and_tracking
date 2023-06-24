@@ -21,7 +21,7 @@ class MOTCorrelationTracker
 {
 public:
     MOTCorrelationTracker();
-    void inputPaths(const string& directory_name, const string& source_path, const string& tracketracker_namerName);
+    void inputPaths(const string& directory_name, const string& source_path, const string& tracker_name);
     void initTracker();
     int runObjectTracking();
 
@@ -41,6 +41,9 @@ private:
     /********Constants********/
     // For Drawing BBoxes
     const vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+    const float line_width = 3.0;
+    const float font_scale = line_width / 3.0f;
+    const float line_thickness = max(line_width - 1.0f, 1.0f);
 
     // For Detection
     const float INPUT_WIDTH = 640.0;
@@ -51,7 +54,7 @@ private:
     const double SCALE_FACTOR = 1.0 / 3.0;
 
     // For Association
-    const int MAX_AGE = 1;
+    const int MAX_AGE = 3;
     const int MIN_HITS = 3;
     const float IOU_THRES = 0.3; // IoU Thres to reject assocations
     const float REFRESH_IOU_THRES = 0.80; // IoU Thres to replace old tracker with new for current track
@@ -97,11 +100,6 @@ private:
     int fw;
     int fh;
 
-    /********BBox Drawing Details********/
-    float line_width = 3.0;
-    float font_scale = line_width / 3.0f;
-    float line_thickness = max(line_width - 1.0f, 1.0f);
-
     /********Counters********/
     int track_count = 0;
     int total_frames = 0;
@@ -118,20 +116,20 @@ private:
     void warmupNet(cv::dnn::Net& net);
 
     // For Detection
-    void detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection> &output, const vector<string> &className);
+    void detect(cv::Mat &image, cv::dnn::Net &net, vector<Detection>& output, const vector<string>& class_list);
     
     // For Tracking
-    void createTrack(cv::Mat &frame, Detection& detection);
+    void createTrack(cv::Mat& frame, Detection& detection);
     void createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker);
-    void getTrackersPred(cv::Mat &frame);
+    void getTrackersPred(cv::Mat& frame);
 
     // For Association
     void associate();
-    void updateTracks(cv::Mat &frame, vector<Detection>& detector_output);
+    void updateTracks(cv::Mat& frame, vector<Detection>& detector_output);
 
     // For Drawing BBoxes
-    void drawBBox(cv::Mat &frame, vector<Detection> &output, const vector<string> &class_list);
-    void drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list);
+    void drawBBox(cv::Mat& frame, vector<Detection>& output, const vector<string>& class_list);
+    void drawBBox(cv::Mat& frame, vector<Track>& multi_tracker, const vector<string>& class_list);
 };
 
 #endif

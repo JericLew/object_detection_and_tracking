@@ -116,15 +116,22 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
     float y_factor = formatted_image.rows / INPUT_HEIGHT;
 
     float *data = (float *)outputs[0].data;
-
     const int dimensions = 5 + class_list.size(); // x,y,w,h,conf + num of class conf
-    cout << dimensions << endl;
     const int rows = 25200;
 
     vector<int> class_ids;
     vector<float> confidences;
     vector<cv::Rect> bboxes;
-
+    if (DEBUG_FLAG)
+    {
+        cout << "pre nms Detections bboxes: ";
+        for (int i = 0; i < bboxes.size(); i++)
+        {
+            cv::Rect bbox = bboxes[i];
+            cout << bbox << " ";
+        }
+        cout << endl;           
+    }
     // unwrap detections
     for (int i = 0; i < rows; ++i)
     {
@@ -166,6 +173,7 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
         result.confidence = confidences[idx];
         result.bbox = bboxes[idx];
         detector_output.push_back(result); // add to detector_output
+        cout << result.bbox << endl;
     }
 }
 
@@ -174,7 +182,7 @@ void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& dete
     /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
     if (tracker_name == "MOSSE")
         new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
-    else if (tracker_name=="KCF")
+    else if (tracker_name == "KCF")
         new_tracker = cv::TrackerKCF::create();
 
     // Shrink detection bbox
@@ -383,9 +391,10 @@ void MOTCorrelationTracker::updateTracks(cv::Mat& shrunk_frame, vector<Detection
         double iou_score = GetIOU(detector_output[detect_idx].bbox, multi_tracker[track_idx].bbox);
         if (iou_score < REFRESH_IOU_THRES)
         {
-        cv::Ptr<cv::Tracker> new_tracker;
-        createTracker(shrunk_frame, detector_output[detect_idx], new_tracker);
-        multi_tracker[track_idx].tracker = new_tracker;
+            cout << "refresh track for" << multi_tracker[track_idx].track_id << endl;
+            cv::Ptr<cv::Tracker> new_tracker;
+            createTracker(shrunk_frame, detector_output[detect_idx], new_tracker);
+            multi_tracker[track_idx].tracker = new_tracker;
         }
 
         multi_tracker[track_idx].num_hit++; 
@@ -460,6 +469,16 @@ int MOTCorrelationTracker::runObjectTracking()
             detector_output.clear();
             getTrackersPred(shrunk_frame);
             detect(frame, net, detector_output, class_list);
+            if (DEBUG_FLAG)
+            {
+                cout << "Detections: ";
+                for (int i = 0; i < detector_output.size(); i++)
+                {
+                    Detection& detection = detector_output[i];
+                    cout << detection.bbox << " ";
+                }
+                cout << endl;           
+            }
             associate();
             updateTracks(shrunk_frame, detector_output);
         }
