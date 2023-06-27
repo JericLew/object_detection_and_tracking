@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project( frame_extractor )
+project( Tracking )
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -30,6 +30,5 @@ set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-add_executable( frame_extractor 
-    FrameExtractor.cpp)
-target_link_libraries( frame_extractor ${OpenCV_LIBS} )
+add_executable( Tracking Tracking.cpp )
+target_link_libraries( Tracking ${OpenCV_LIBS} )
