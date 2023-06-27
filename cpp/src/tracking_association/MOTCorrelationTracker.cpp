@@ -122,16 +122,7 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
     vector<int> class_ids;
     vector<float> confidences;
     vector<cv::Rect> bboxes;
-    if (DEBUG_FLAG)
-    {
-        cout << "pre nms Detections bboxes: ";
-        for (int i = 0; i < bboxes.size(); i++)
-        {
-            cv::Rect bbox = bboxes[i];
-            cout << bbox << " ";
-        }
-        cout << endl;           
-    }
+
     // unwrap detections
     for (int i = 0; i < rows; ++i)
     {
@@ -162,9 +153,25 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
         }
         data += dimensions; // next detection (x,y,w,h,conf,num of class conf)
     }
+
+    if (DEBUG_FLAG)
+    {
+        cout << "Pre NMS bboxes: ";
+        for (int i = 0; i < bboxes.size(); i++)
+        {
+            cv::Rect bbox = bboxes[i];
+            cout << bbox << " ";
+        }
+        cout << endl;           
+    }
+
     // nms
     vector<int> nms_result;
     cv::dnn::NMSBoxes(bboxes, confidences, DETECT_CONF_THRES, NMS_THRES, nms_result);
+    if (DEBUG_FLAG)
+    {
+        cout << "Post NMS bboxes: ";         
+    }
     for (int i = 0; i < nms_result.size(); i++)
     {
         int idx = nms_result[i];
@@ -173,8 +180,9 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
         result.confidence = confidences[idx];
         result.bbox = bboxes[idx];
         detector_output.push_back(result); // add to detector_output
-        cout << result.bbox << endl;
+        cout << result.bbox << " ";
     }
+    cout << endl;
 }
 
 void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker)
@@ -469,16 +477,6 @@ int MOTCorrelationTracker::runObjectTracking()
             detector_output.clear();
             getTrackersPred(shrunk_frame);
             detect(frame, net, detector_output, class_list);
-            if (DEBUG_FLAG)
-            {
-                cout << "Detections: ";
-                for (int i = 0; i < detector_output.size(); i++)
-                {
-                    Detection& detection = detector_output[i];
-                    cout << detection.bbox << " ";
-                }
-                cout << endl;           
-            }
             associate();
             updateTracks(shrunk_frame, detector_output);
         }
