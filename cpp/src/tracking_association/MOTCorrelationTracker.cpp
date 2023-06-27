@@ -12,7 +12,22 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
     path_class_input = directory_name + "classes/classes_train.txt";
     path_net_input = directory_name + "models/best_all.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;
-    
+    if (tracker_name == "KCF") //KCF BUGGY
+        cout << "KCF results in old detections, please use MOSSE"
+    else if (tracker_name == "TLD")
+        cout << "TLD result in negative value in bbox, please use MOSSE"
+    else if (tracker_name == "BOOSTING")
+        cout << "BOOSTING result in negative value in bbox, please use MOSSE"
+    else if (tracker_name == "MEDIAN_FLOW")
+        cout << "Using MIL"
+    else if (tracker_name == "MIL")
+        cout << "MIL is slow, please use MOSSE"
+    else if (tracker_name == "GOTURN")
+        cout << "GOTURN not supported, please use MOSSE"
+    else if (tracker_name == "MOSSE")
+        cout << "Using MOSSE"
+    else if (tracker_name == "CSRT")
+        cout << "CSRT is slow, please use MOSSE"    
 }
 
 void MOTCorrelationTracker::loadClassList(vector<string>& class_list)
@@ -187,11 +202,25 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
 
 void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker)
 {
-    /* https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp */
-    if (tracker_name == "MOSSE")
-        new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
-    else if (tracker_name == "KCF")
+    /*
+    https://github.com/opencv/opencv_contrib/blob/master/modules/tracking/samples/samples_utility.hpp 
+    */
+    if (tracker_name == "KCF") //KCF BUGGY
         new_tracker = cv::TrackerKCF::create();
+    else if (tracker_name == "TLD")
+        new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerTLD::create());
+    else if (tracker_name == "BOOSTING")
+        new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerBoosting::create());
+    else if (tracker_name == "MEDIAN_FLOW")
+        new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMedianFlow::create());
+    else if (tracker_name == "MIL")
+        new_tracker = cv::TrackerMIL::create();
+    else if (tracker_name == "GOTURN")
+        new_tracker = cv::TrackerGOTURN::create();
+    else if (tracker_name == "MOSSE")
+        new_tracker = cv::legacy::upgradeTrackingAPI(cv::legacy::TrackerMOSSE::create());
+    else if (tracker_name == "CSRT")
+        new_tracker = cv::TrackerCSRT::create();
 
     // Shrink detection bbox
     cv::Rect scaled_bbox = scaleBBox(detection.bbox, SCALE_FACTOR);
@@ -399,7 +428,7 @@ void MOTCorrelationTracker::updateTracks(cv::Mat& shrunk_frame, vector<Detection
         double iou_score = GetIOU(detector_output[detect_idx].bbox, multi_tracker[track_idx].bbox);
         if (iou_score < REFRESH_IOU_THRES)
         {
-            cout << "refresh track for" << multi_tracker[track_idx].track_id << endl;
+            cout << "refresh track ID: " << multi_tracker[track_idx].track_id << endl;
             cv::Ptr<cv::Tracker> new_tracker;
             createTracker(shrunk_frame, detector_output[detect_idx], new_tracker);
             multi_tracker[track_idx].tracker = new_tracker;
