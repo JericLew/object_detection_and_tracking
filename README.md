@@ -1,4 +1,4 @@
-![image](https://github.com/JericLew/obj_tracking_opencv/assets/98013330/3cdc6e46-4049-46ed-a638-d43e95ff92c8)# Object Tracking OpenCV
+# Object Tracking OpenCV
 
 Small OpenCV project for object detection and tracking.
 
