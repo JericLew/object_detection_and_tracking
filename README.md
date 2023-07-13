@@ -26,7 +26,9 @@ CUDA is optional but recommended to speed-up inference and training speeds with 
 ### CUDNN
 
 CUDNN is optional but is required for OpenCV DNN acceleration
+
 [CUDNN Install Instructions](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html)
+
 [CUDNN Download](https://developer.nvidia.com/rdp/cudnn-download)
 
 ### OpenCV
