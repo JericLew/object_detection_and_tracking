@@ -1,4 +1,4 @@
-# Object Tracking OpenCV
+![image](https://github.com/JericLew/obj_tracking_opencv/assets/98013330/3cdc6e46-4049-46ed-a638-d43e95ff92c8)# Object Tracking OpenCV
 
 Small OpenCV project for object detection and tracking.
 
@@ -101,7 +101,7 @@ python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 
 Warning: using --batch-size 12 or lower for training
 ```sh
-python train.py --img 640 --epochs 200 --data trial.yaml --weights yolov5s.pt --batch-size 12 --device 0
+python train.py --img 640 --epochs 300 --data merge_class.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50
 ```
 
 For detect
