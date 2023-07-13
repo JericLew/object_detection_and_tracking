@@ -18,7 +18,9 @@ Small OpenCV project for object detection and tracking.
 ### CUDA
 
 CUDA is optional but recommended to speed-up inference and training speeds with OpenCV and pyTorch
+
 [CUDA Install Instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#package-manager-installation)
+
 [CUDA Download](https://developer.nvidia.com/cuda-toolkit-archive)
 
 ### CUDNN
