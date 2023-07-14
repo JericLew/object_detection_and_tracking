@@ -98,14 +98,17 @@ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --e
 
 Install YOLOv5 using instructions from their [documentation](https://docs.ultralytics.com/yolov5/quickstart_tutorial/)
 
+For export .pt to .onnx
+
 Warning: using --opset 11 for exporting to ONNX
 ```sh
 python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 ```
+For training
 
 Warning: using --batch-size 12 or lower for training
 ```sh
-python train.py --img 640 --epochs 300 --data merge_class.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50
+python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50
 ```
 
 For detect
