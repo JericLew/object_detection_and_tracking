@@ -13,21 +13,21 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
     path_net_input = directory_name + "models/best_all.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;
     if (tracker_name == "KCF") //KCF BUGGY
-        cout << "KCF results in old detections, please use MOSSE"
+        cout << "KCF results in old detections, please use MOSSE";
     else if (tracker_name == "TLD")
-        cout << "TLD result in negative value in bbox, please use MOSSE"
+        cout << "TLD result in negative value in bbox, please use MOSSE";
     else if (tracker_name == "BOOSTING")
-        cout << "BOOSTING result in negative value in bbox, please use MOSSE"
+        cout << "BOOSTING result in negative value in bbox, please use MOSSE";
     else if (tracker_name == "MEDIAN_FLOW")
-        cout << "Using MIL"
+        cout << "Using MIL";
     else if (tracker_name == "MIL")
-        cout << "MIL is slow, please use MOSSE"
+        cout << "MIL is slow, please use MOSSE";
     else if (tracker_name == "GOTURN")
-        cout << "GOTURN not supported, please use MOSSE"
+        cout << "GOTURN not supported, please use MOSSE";
     else if (tracker_name == "MOSSE")
-        cout << "Using MOSSE"
+        cout << "Using MOSSE";
     else if (tracker_name == "CSRT")
-        cout << "CSRT is slow, please use MOSSE"    
+        cout << "CSRT is slow, please use MOSSE"; 
 }
 
 void MOTCorrelationTracker::loadClassList(vector<string>& class_list)
@@ -512,7 +512,11 @@ int MOTCorrelationTracker::runObjectTracking()
 
         else
         {
+            int64 start_track = cv::getTickCount();
             getTrackersPred(shrunk_frame);
+            int64 end_track = cv::getTickCount();
+            double elasped_time_track = (end_track - start_track) * 1000 / cv::getTickFrequency();
+            cout << "Track Time: " << elasped_time_track << " ms" << std::endl;
         }
 
         drawBBox(frame, multi_tracker, class_list);

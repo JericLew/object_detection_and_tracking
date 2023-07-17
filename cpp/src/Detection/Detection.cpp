@@ -9,8 +9,8 @@ void ObjectDetector::inputPaths(const string& directory_name, const string& sour
     // Concatenate the directory name with another string
     path_video_input = source_path;
     path_video_output = directory_name + "output/detect_cpp.mp4";
-    path_class_input = directory_name + "classes/classes_train.txt";
-    path_net_input = directory_name + "models/best_all.onnx";    
+    path_class_input = directory_name + "classes/classes_merge.txt";
+    path_net_input = directory_name + "models/best_split.onnx";    
 }
 
 void ObjectDetector::loadClassList(vector<string>& class_list)
