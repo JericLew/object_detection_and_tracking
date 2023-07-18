@@ -393,7 +393,7 @@ void MOTCorrelationTracker::updateTracks(cv::Mat& shrunk_frame, vector<Detection
 }
 
 void MOTCorrelationTracker::extract_detections(){
-    std::ifstream infile("/home/jeric/MOT15/train/PETS09-S2L1/det/det.txt"); // Replace "input.txt" with the actual path to your input file
+    std::ifstream infile("/home/jeric/MOT15/train/KITTI-13/det/det.txt"); // Replace "input.txt" with the actual path to your input file
     
     // Map to store the lines grouped by frame value
     std::string line;
@@ -445,7 +445,7 @@ int MOTCorrelationTracker::runObjectTracking()
     int last_frame = lastFrameIterator->first;  // Retrieve the frame number of the last added element
 
     cout << last_frame << endl;
-    string folderPath = "/home/jeric/MOT15/train/PETS09-S2L1/img1/";
+    string folderPath = "/home/jeric/MOT15/train/KITTI-13/img1/";
     string fileExtension = ".jpg";
     
     for (int i = 1; i <= last_frame; i++)

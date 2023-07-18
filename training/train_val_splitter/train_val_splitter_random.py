@@ -1,15 +1,29 @@
 import os
 import random
 import shutil
+import argparse
+
+# Create the argument parser
+parser = argparse.ArgumentParser(description='Randomly seperate to train and val')
+
+# Add the input and output file arguments
+parser.add_argument('source_folder', help='/path/to/source/folder')
+parser.add_argument('split_ratio', help='fraction of train aka 0.7 for 70% train')
+# Parse the arguments
+args = parser.parse_args()
+source_folder = args.source_folder
+split_ratio = float(args.split_ratio)
 
 # Specify the paths to the image folder, label folder, train folder, and validation folder
-image_source_folder = '/home/jeric/datasets/merge_class_copy/images/'
-label_source_folder = '/home/jeric/datasets/merge_class_copy/labels/'
-image_train_folder = '/home/jeric/datasets/merge_class_random_split/images/train/'
-image_val_folder = '/home/jeric/datasets/merge_class_random_split/images/val/'
-label_train_folder = '/home/jeric/datasets/merge_class_random_split/labels/train/'
-label_val_folder = '/home/jeric/datasets/merge_class_random_split/labels/val/'
-split_ratio = 0.7  # 70% for training, 30% for validation
+image_source_folder = os.path.join(source_folder, 'images')
+label_source_folder = os.path.join(source_folder, 'labels')
+
+base_directory, folder_name = os.path.split(source_folder)
+new_folder_name = folder_name + '_random_split'
+image_train_folder = os.path.join(base_directory,new_folder_name,'images','train')
+image_val_folder =  os.path.join(base_directory,new_folder_name,'images','val')
+label_train_folder = os.path.join(base_directory,new_folder_name,'labels','train')
+label_val_folder = os.path.join(base_directory,new_folder_name,'labels','val')
 
 def split_data(image_source_folder, image_train_folder, image_val_folder, split_ratio):
     # Create the train and validation folders if they don't exist

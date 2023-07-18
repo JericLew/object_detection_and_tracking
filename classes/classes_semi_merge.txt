@@ -1,0 +1,7 @@
+ferry
+buoy
+vessel
+speedboat
+boat
+kayak
+sailboat

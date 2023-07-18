@@ -9,7 +9,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Merge classes by going through all txt in a path_to_labels and editing them')
 
 # Add the input and output file arguments
-parser.add_argument('path_to_labels', help='/path/to/labels/')
+parser.add_argument('path_to_labels', help='/path/to/lables/')
 # Parse the arguments
 args = parser.parse_args()
 path_to_labels = args.path_to_labels
@@ -33,17 +33,17 @@ for filename in os.listdir(path_to_labels):
             if class_id == 0:
                 modified_class_id = 0
             elif class_id == 1:
-                modified_class_id = 2
+                modified_class_id = 1
             elif class_id == 2:
-                modified_class_id = 0
+                modified_class_id = 2
             elif class_id == 3:
-                modified_class_id = 1
+                modified_class_id = 3
             elif class_id == 4:
-                modified_class_id = 1
+                modified_class_id = 4
             elif class_id == 5:
-                modified_class_id = 1
+                modified_class_id = 5
             elif class_id == 6:
-                modified_class_id = 1
+                modified_class_id = 6
             elif class_id == 7:
                 continue
             elif class_id == 8:
