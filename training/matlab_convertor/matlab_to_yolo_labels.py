@@ -1,7 +1,7 @@
 import scipy.io as sio
 import numpy as np
 import pandas as pd
-import csv
+import os
 import argparse
 
 # Create the argument parser
@@ -18,6 +18,9 @@ input_mat_path = args.input_mat_path
 video_name = input_mat_path.split('/')[-1].split('_ObjectGT.mat')[0]
 output_folder_path = args.output_folder_path
 output_csv = output_folder_path + video_name + ".csv"
+
+# make dir if it doesnt exist
+os.makedirs(output_folder_path, exist_ok=True)
 
 data = sio.loadmat(input_mat_path)
 print(data.keys())

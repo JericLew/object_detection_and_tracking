@@ -8,9 +8,17 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
 {
     // Concatenate the directory name with another string
     path_video_input = source_path;
-    path_video_output = directory_name + "output/track_ass_cpp.mp4";
-    path_class_input = directory_name + "classes/classes_train.txt";
-    path_net_input = directory_name + "models/best_all.onnx";
+
+    // Find the last occurrence of '/' character to get the position of the file name
+    size_t last_slash_index = path_video_input.find_last_of('/');
+    // Find the position of the dot '.' character to get the extension
+    size_t dot_index = path_video_input.find_last_of('.');
+    // Extract the substring between the last slash and dot positions
+    string video_name = path_video_input.substr(last_slash_index + 1, dot_index - last_slash_index - 1);
+    
+    path_video_output = directory_name + "output/" + video_name + "_" + tracker_name + "_track_ass_cpp.mp4";
+    path_class_input = directory_name + "classes/classes_merge.txt";
+    path_net_input = directory_name + "models/last_exp2.onnx";
     MOTCorrelationTracker::tracker_name = tracker_name;
     if (tracker_name == "KCF") //KCF BUGGY
         cout << "KCF results in old detections, please use MOSSE";
@@ -169,16 +177,16 @@ void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vect
         data += dimensions; // next detection (x,y,w,h,conf,num of class conf)
     }
 
-    if (DEBUG_FLAG)
-    {
-        cout << "Pre NMS bboxes: ";
-        for (int i = 0; i < bboxes.size(); i++)
-        {
-            cv::Rect bbox = bboxes[i];
-            cout << bbox << " ";
-        }
-        cout << endl;           
-    }
+    // if (DEBUG_FLAG)
+    // {
+    //     cout << "Pre NMS bboxes: ";
+    //     for (int i = 0; i < bboxes.size(); i++)
+    //     {
+    //         cv::Rect bbox = bboxes[i];
+    //         cout << bbox << " ";
+    //     }
+    //     cout << endl;           
+    // }
 
     // nms
     vector<int> nms_result;
@@ -501,7 +509,7 @@ int MOTCorrelationTracker::runObjectTracking()
             }
         }
 
-        else if (total_frames > 10 && total_frames%10== 0)
+        else if (total_frames > 10 && total_frames%1== 0)
         {
             detector_output.clear();
             getTrackersPred(shrunk_frame);

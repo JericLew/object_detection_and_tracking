@@ -1,6 +1,6 @@
 import cv2 
 import argparse
-
+import os
 start = cv2.getTickCount()
 
 # Create the argument parser
@@ -17,6 +17,9 @@ input_video_path = args.input_video_path
 video_name = input_video_path.split('/')[-1]
 video_name_no_ext = video_name.split('.')[0]
 output_folder_path = args.output_folder_path
+
+# make dir if it doesnt exist
+os.makedirs(output_folder_path, exist_ok=True)
 
 cap = cv2.VideoCapture(input_video_path)
 

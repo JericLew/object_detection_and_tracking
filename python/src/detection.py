@@ -1,6 +1,25 @@
 import cv2 
 import numpy as np
 from helper_funcs import *
+import argparse
+import os
+
+# Create the argument parser
+parser = argparse.ArgumentParser(description='Detection engine written in python with opencv')
+
+# Add the input and output file arguments
+parser.add_argument('tracking_ws_path', help='/path/to/tracking_ws/')
+parser.add_argument('input_video_path', help='/path/to/video/file/video.xxx')
+
+
+# Parse the arguments
+args = parser.parse_args()
+input_video_path = args.input_video_path
+tracking_ws_path = args.tracking_ws_path
+video_name = input_video_path.split('/')[-1]
+video_name_no_ext = video_name.split('.')[0]
+output_video_path = os.path.join(tracking_ws_path,'output',video_name_no_ext+'_detect_py.mp4')
+print(output_video_path)
 
 class objectDetector():
 
@@ -14,16 +33,16 @@ class objectDetector():
         self.frame_count = 0
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/videos/video1.avi') # Create a VideoCapture object
+        self.cap = cv2.VideoCapture(input_video_path) # Create a VideoCapture object
         # self.cap = cv2.VideoCapture(0)  
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.fh = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"FPS: {self.fps}, Width: {self.fw}, Height: {self.fh}")
-        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/output/detect_py.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
+        self.out = cv2.VideoWriter(output_video_path,cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Detector init
-        self.net = cv2.dnn.readNet('/home/jeric/yolov5/best_all.onnx') # input obj detector network
+        self.net = cv2.dnn.readNet('/home/jeric/tracking_ws/models/last_exp2.onnx') # input obj detector network
 
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
@@ -66,6 +85,9 @@ def main(args=None):
         start_time = cv2.getTickCount()
 
         ret, current_frame = object_detector.cap.read()
+
+        if not ret:
+            break
              
         # pass through detector
         object_detector.detect(current_frame)

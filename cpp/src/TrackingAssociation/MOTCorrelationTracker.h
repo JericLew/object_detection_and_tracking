@@ -54,7 +54,7 @@ private:
     const double SCALE_FACTOR = 1.0 / 3.0;
 
     // For Association
-    const int MAX_AGE = 3;
+    const int MAX_AGE = 1;
     const int MIN_HITS = 3;
     const float IOU_THRES = 0.3; // IoU Thres to reject assocations
     const float REFRESH_IOU_THRES = 0.80; // IoU Thres to replace old tracker with new for current track
