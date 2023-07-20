@@ -33,9 +33,13 @@ if __name__ == '__main__':
             sort_input_detections[:, 2:4] += sort_input_detections[:, 0:2] #convert to [x1,y1,w,h] to [x1,y1,x2,y2]
 
         # print(sort_input_detections)
-
+        start_time_track = cv2.getTickCount()
         # update SORT
         trackers = mot_tracker.update(sort_input_detections)
+        ticks_track = cv2.getTickCount() - start_time_track
+        elapsed_time_track = (ticks_track / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
+        print("Time taken for track:", elapsed_time_track, "milliseconds\n")
+
         # print(trackers)
         # for d in trackers:
         #   print('%d,%.2f,%.2f,%.2f,%.2f,1,-1,-1,-1'%(d[4],d[0],d[1],d[2]-d[0],d[3]-d[1]))

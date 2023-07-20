@@ -107,7 +107,7 @@ def nms(in_boxes, in_confidences,in_class_ids, detect_conf_thres, nms_thres):
 
 def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
     class_list = []
-    with open("/home/jeric/tracking_ws/classes/classes_train.txt", "r") as f:
+    with open("/home/jeric/tracking_ws/classes/classes_merge.txt", "r") as f:
         class_list = [cname.strip() for cname in f.readlines()]
 
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
@@ -120,11 +120,9 @@ def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
             color = colors[class_id % len(colors)]
             #conf  = result_confidences[object_id]
             cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
-            cv2.rectangle(current_frame, (x,y-20), (x+w,y), color, -1)
-            if tracking:
-                cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
-            else:
-                cv2.putText(current_frame, class_list[class_id], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            cv2.rectangle(current_frame, (x,y-30), (x+w,y), color, -1)
+
+            cv2.putText(current_frame, class_list[class_id] , (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0),2)
     else:
         for object_id, box in enumerate(result_boxes):
             if box == None:
@@ -135,11 +133,9 @@ def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
             color = colors[class_id % len(colors)]
             #conf  = result_confidences[object_id]
             cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
-            cv2.rectangle(current_frame, (x,y-20), (x+w,y), color, -1)
-            if tracking:
-                cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
-            else:
-                cv2.putText(current_frame, class_list[class_id], (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0))
+            cv2.rectangle(current_frame, (x,y-30), (x+w,y), color, -1)
+            cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2)
+
 
         
 def calculate_iou(bb1, bb2):

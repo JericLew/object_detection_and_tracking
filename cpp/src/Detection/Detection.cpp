@@ -8,9 +8,17 @@ void ObjectDetector::inputPaths(const string& directory_name, const string& sour
 {
     // Concatenate the directory name with another string
     path_video_input = source_path;
-    path_video_output = directory_name + "output/detect_cpp.mp4";
+
+    // Find the last occurrence of '/' character to get the position of the file name
+    size_t last_slash_index = path_video_input.find_last_of('/');
+    // Find the position of the dot '.' character to get the extension
+    size_t dot_index = path_video_input.find_last_of('.');
+    // Extract the substring between the last slash and dot positions
+    string video_name = path_video_input.substr(last_slash_index + 1, dot_index - last_slash_index - 1);
+    
+    path_video_output = directory_name + "output/" + video_name + "_detect_cpp.mp4";
     path_class_input = directory_name + "classes/classes_merge.txt";
-    path_net_input = directory_name + "models/best_300_0.7_image-weights.onnx";    
+    path_net_input = directory_name + "models/last_exp2.onnx";
 }
 
 void ObjectDetector::loadClassList(vector<string>& class_list)

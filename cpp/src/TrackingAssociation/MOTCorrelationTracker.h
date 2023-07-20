@@ -29,7 +29,7 @@ private:
     /********Control Flags********/
     const int STATUS_FLAG = 1;
     // const int TIMER_FLAG = 1; // TODO TIMER TO TEST PERF
-    const int DEBUG_FLAG = 1;
+    const int DEBUG_FLAG = 0;
 
     /********User Input********/
     string path_video_input;

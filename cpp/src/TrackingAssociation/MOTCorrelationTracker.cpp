@@ -19,6 +19,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
     path_video_output = directory_name + "output/" + video_name + "_" + tracker_name + "_track_ass_cpp.mp4";
     path_class_input = directory_name + "classes/classes_merge.txt";
     path_net_input = directory_name + "models/last_exp2.onnx";
+    
     MOTCorrelationTracker::tracker_name = tracker_name;
     if (tracker_name == "KCF") //KCF BUGGY
         cout << "KCF results in old detections, please use MOSSE";
@@ -499,7 +500,7 @@ int MOTCorrelationTracker::runObjectTracking()
         cv::Mat shrunk_frame;
         cv::resize(frame, shrunk_frame, cv::Size(), SCALE_FACTOR, SCALE_FACTOR, cv::INTER_AREA);
 
-        if (total_frames == 10)
+        if (total_frames == 0)
         {
             detect(frame, net, detector_output, class_list);
             int detections = detector_output.size();
@@ -512,10 +513,19 @@ int MOTCorrelationTracker::runObjectTracking()
         else if (total_frames > 10 && total_frames%1== 0)
         {
             detector_output.clear();
+        int64 start_pred = cv::getTickCount();
             getTrackersPred(shrunk_frame);
+        int64 end_pred = cv::getTickCount();
+        double elasped_time_pred = (end_pred - start_pred) * 1000 / cv::getTickFrequency();
+        cout << "Pred Time: " << elasped_time_pred << " ms" << std::endl;
             detect(frame, net, detector_output, class_list);
+
+        int64 start_update = cv::getTickCount();
             associate();
             updateTracks(shrunk_frame, detector_output);
+        int64 end_update = cv::getTickCount();
+        double elasped_time_update = (end_update - start_update) * 1000 / cv::getTickFrequency();
+        cout << "Update Time: " << elasped_time_update << " ms" << std::endl;
         }
 
         else
