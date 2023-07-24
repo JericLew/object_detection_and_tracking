@@ -1,5 +1,5 @@
 #!/bin/bash
-''' 
+: '
 This bash script extracts frames and labels for training.
 
 This is for merge_class, which only merges the swimmer,aerial and other class into background
@@ -11,7 +11,8 @@ Make sure that
  - "merge_class" folder which has "images" and "labels" is created
 
 Run train_val_splitter_random.py after generation of files
-'''
+'
+
 # FOR Onshore frame extraction
 # Source directory
 source_dir=~/datasets/VIS_Onshore/Videos/train

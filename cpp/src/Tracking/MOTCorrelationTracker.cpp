@@ -16,7 +16,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
     // Extract the substring between the last slash and dot positions
     string video_name = path_video_input.substr(last_slash_index + 1, dot_index - last_slash_index - 1);
     
-    path_video_output = directory_name + "output/" + video_name + "_" + tracker_name + "_track_ass_cpp.mp4";
+    path_video_output = directory_name + "output/" + video_name + "_" + tracker_name + "_track_cpp.mp4";
     path_class_input = directory_name + "classes/classes_merge.txt";
     path_net_input = directory_name + "models/last_exp2.onnx";
     

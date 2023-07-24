@@ -1,6 +1,11 @@
 #!/bin/bash
+: '
+This is a dummy bash script with different examples
+'
 
-# FOR Onshore frame extraction
+: '
+For running cpp Detection and getting output on all unlabelled videos
+'
 # Source directory
 tracking_ws_dir=~/tracking_ws/
 
@@ -16,7 +21,7 @@ do
         file_name=$(basename "$file_path")
         
         # Run the Python command with the file path
-        ./Detection "$tracking_ws_dir" "$file_path"
+        ~/tracking_ws/cpp/src/Detection/build/Detection "$tracking_ws_dir" "$file_path"
     fi
 done
 
@@ -31,10 +36,13 @@ do
         file_name=$(basename "$file_path")
         
         # Run the Python command with the file path
-        ./Detection "$tracking_ws_dir" "$file_path"
+        ~/tracking_ws/cpp/src/Detection/build/Detection "$tracking_ws_dir" "$file_path"
     fi
 done
 
+: '
+For running python SORT tracker and getting its output on selected videos in ~/video_for_track
+'
 # # Source directory
 # video_input_dir=~/video_for_track/
 
@@ -51,7 +59,9 @@ done
 #     fi
 # done
 
-
+: '
+For running cpp Tracking (CSRT) and getting its output on selected videos in ~/video_for_track
+'
 # # Source directory
 # video_input_dir=~/video_for_track/
 
@@ -64,10 +74,14 @@ done
 #         file_name=$(basename "$file_path")
         
 #         # Run the Python command with the file path
-#         ./TrackingAssociation "$tracking_ws_dir" "$file_path" CSRT
+#         ~/tracking_ws/cpp/src/Detection/build/Tracking "$tracking_ws_dir" "$file_path" CSRT
 #     fi
 # done
 
+
+: '
+For running cpp Tracking (MOSSE) and getting its output on every single video file in VIS_Onboard and VIS_Onshore
+'
 # # Source directory
 # video_input_dir=/media/jeric/1FC7-901F/dataset/VIS_Onboard/Videos/
 
@@ -82,7 +96,7 @@ done
 #             file_name=$(basename "$file_path")
             
 #             # Run the Python command with the file path
-#             ./TrackingAssociation "$tracking_ws_dir" "$file_path" MOSSE
+#             ~/tracking_ws/cpp/src/Detection/build/Tracking "$tracking_ws_dir" "$file_path" MOSSE
 #         fi
 #     done
 # done
@@ -99,7 +113,7 @@ done
 #             file_name=$(basename "$file_path")
             
 #             # Run the Python command with the file path
-#             ./TrackingAssociation "$tracking_ws_dir" "$file_path" MOSSE
+#             ~/tracking_ws/cpp/src/Detection/build/Tracking "$tracking_ws_dir" "$file_path" MOSSE
 #         fi
 #     done
 # done

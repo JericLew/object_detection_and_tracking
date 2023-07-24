@@ -98,11 +98,11 @@ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --e
 
 Install YOLOv5 using instructions from their [documentation](https://docs.ultralytics.com/yolov5/quickstart_tutorial/)
 
-#### Export
-Warning: using --opset 11 for exporting to ONNX
+#### Inference
 ```sh
-python3 export.py --weights best.pt --include onnx --device 0 --opset 11
+python detect.py --weights ~/yolov5/run/train/5_epoch_all/weights/best.pt --source ~/tracking_ws/videos/video1.avi --view-img
 ```
+
 #### Training
 Warning: using --batch-size 12 or lower for training
 ```sh
@@ -114,11 +114,54 @@ python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --we
 python val.py --weights /path/to/model.pt --data ./data/merge_class_random_split.yaml --batch-size 64 --device 0 --verbose
 ```
 
-#### Detection
+#### Export
+Warning: using --opset 11 for exporting to ONNX
 ```sh
-python detect.py --weights ~/yolov5/run/train/5_epoch_all/weights/best.pt --source ~/tracking_ws/videos/video1.avi --view-img
+python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 ```
 
 ## Usage
 
-To be updated, change CMake to include directory
+### CPP
+
+1. Enter Detection/Tracking directory
+   ```sh
+   cd ~/tracking_ws/cpp/src/Detection
+   ```
+
+2. Create and enter build directory
+   ```sh
+   mkdir build && cd build
+   ```
+
+3. Initialse CMake from CMakeLists.txt
+   ```sh
+   cmake ..
+   ```
+
+4. Build cpp source code
+   ```sh
+   make
+   ```
+
+#### Detection
+
+Run Detection executable
+Arguements are /path/to/tracking/ws and /path/to/video/input
+
+```sh
+./Detection ~/tracking_ws/ ~/tracking_ws/videos/video1.avi
+```
+
+#### Tracking
+
+Run Tracking executable
+Arguements are /path/to/tracking/ws, /path/to/video/input and tracker name (MOSSE, CSRT etc.)
+
+```sh
+./Tracking ~/tracking_ws/ ~/tracking_ws/videos/video1.avi MOSSE
+```
+
+### Python
+
+Note: Python scripts for detection and tracking are outdated

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project( TrackingAssociation )
+project( Tracking )
 
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -31,11 +31,11 @@ set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
-add_executable( TrackingAssociation 
+add_executable( Tracking 
     main.cpp
     MOTCorrelationTracker.cpp
     ../Detection/Detection.cpp
     ../common/Hungarian.cpp
     ../common/Utils.cpp
     ../common/Init_NN.cpp)
-target_link_libraries( TrackingAssociation ${OpenCV_LIBS} )
+target_link_libraries( Tracking ${OpenCV_LIBS} )
