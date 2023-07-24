@@ -81,10 +81,10 @@ Setup python virtual environment to install pyTorch and YOLO python packages
 ```sh
 sudo apt-get install virtualenv
 cd ~/
-virtualenv env_yolo --system-site-packages
-echo 'export LD_LIBRARY_PATH=~/opencv-4.5.4-linux/local/lib:$LD_LIBRARY_PATH' >> ~/env_yolo/bin/activate
-echo 'export PYTHONPATH=~/opencv-4.5.4-linux/local/lib/python3.8/dist-packages/:$PYTHONPATH' >> ~/env_yolo/bin/activate
-source ~/env_yolo/bin/activate
+virtualenv env_track --system-site-packages
+echo 'export LD_LIBRARY_PATH=~/opencv-4.5.4-linux/local/lib:$LD_LIBRARY_PATH' >> ~/env_track/bin/activate
+echo 'export PYTHONPATH=~/opencv-4.5.4-linux/local/lib/python3.8/dist-packages/:$PYTHONPATH' >> ~/env_track/bin/activate
+source ~/env_track/bin/activate
 ```
 
 ### pyTorch
@@ -103,7 +103,7 @@ Warning: using --opset 11 for exporting to ONNX
 ```sh
 python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 ```
-##### Training
+#### Training
 Warning: using --batch-size 12 or lower for training
 ```sh
 python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50
@@ -114,7 +114,7 @@ python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --we
 python val.py --weights /path/to/model.pt --data ./data/merge_class_random_split.yaml --batch-size 64 --device 0 --verbose
 ```
 
-##### Detection
+#### Detection
 ```sh
 python detect.py --weights ~/yolov5/run/train/5_epoch_all/weights/best.pt --source ~/tracking_ws/videos/video1.avi --view-img
 ```

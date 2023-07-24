@@ -39,56 +39,6 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
         cout << "CSRT is slow, please use MOSSE"; 
 }
 
-void MOTCorrelationTracker::loadClassList(vector<string>& class_list)
-{
-    cout << "Loading Class List...\n";
-    ifstream ifs(path_class_input);
-    string line;
-    while (getline(ifs, line))
-    {
-        class_list.push_back(line);
-    }
-}
-
-void MOTCorrelationTracker::loadNet(cv::dnn::Net& net)
-{   
-    cv::dnn::Net result = cv::dnn::readNet(path_net_input);
-    if (cv::cuda::getCudaEnabledDeviceCount())
-    {
-        cout << "Running Detection with CUDA...\n";
-        result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
-        result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA_FP16);
-    }
-    else
-    {
-        cout << "Running Detection on CPU...\n";
-        result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-        result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    }
-    net = result;
-}
-
-void MOTCorrelationTracker::warmupNet(cv::dnn::Net& net)
-{
-    cout << "Warming Up Detector" << endl;
-    int64 start_warmup = cv::getTickCount();
-
-    cv::Mat dummy_image = cv::Mat::zeros(cv::Size(INPUT_WIDTH, INPUT_HEIGHT), CV_8UC3);  // Create a dummy black image
-
-    // Preprocess the dummy image
-    cv::Mat dummy_blob;
-    cv::dnn::blobFromImage(dummy_image, dummy_blob, 1.0, cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
-
-    // Warm up the network by performing a forward pass
-    net.setInput(dummy_blob);
-    vector<cv::Mat> dummy_outputs;
-    net.forward(dummy_outputs, net.getUnconnectedOutLayersNames());
-
-    int64 end_warmup = cv::getTickCount();
-    double warmup_Time = (end_warmup - start_warmup) * 1000 / cv::getTickFrequency();
-    cout << "Warm-Up Time: " << warmup_Time << " ms" <<endl; 
-}
-
 void MOTCorrelationTracker::initTracker()
 {
     cout << "********Start Init MOTCorrelationTracker********\n";
@@ -112,101 +62,13 @@ void MOTCorrelationTracker::initTracker()
         cerr << "Error creating VideoWriter\n";
     }
 
-    loadClassList(class_list);
-    loadNet(net);
-    warmupNet(net);
+    loadClassList(class_list, path_class_input);
+    loadNet(net, path_net_input);
+    warmupNet(net, INPUT_WIDTH, INPUT_HEIGHT);
 
     cv::namedWindow("Window", cv::WINDOW_NORMAL);
     cv::resizeWindow("Window", 1920, 1080);
     cout << "********End Init MOTCorrelationTracker********\n\n";
-}
-
-void MOTCorrelationTracker::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Detection>& detector_output, const vector<string>& class_list)
-{
-    cout << "Detecting...\n";
-
-    cv::Mat blob;
-
-    cv::Mat formatted_image = formatYOLOv5(input_image);
-
-    cv::dnn::blobFromImage(formatted_image, blob, 1. / 255., cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
-
-    // forward pass into network
-    net.setInput(blob);
-    vector<cv::Mat> outputs;
-    net.forward(outputs, net.getUnconnectedOutLayersNames());
-
-    float x_factor = formatted_image.cols / INPUT_WIDTH;
-    float y_factor = formatted_image.rows / INPUT_HEIGHT;
-
-    float *data = (float *)outputs[0].data;
-    const int dimensions = 5 + class_list.size(); // x,y,w,h,conf + num of class conf
-    const int rows = 25200;
-
-    vector<int> class_ids;
-    vector<float> confidences;
-    vector<cv::Rect> bboxes;
-
-    // unwrap detections
-    for (int i = 0; i < rows; ++i)
-    {
-        float confidence = data[4]; // conf in 4th address
-        if (confidence >= DETECT_CONF_THRES)
-        {
-            float *classes_scores = data + 5; // address of class scores start 5 addresses away
-            cv::Mat scores(1, class_list.size(), CV_32FC1, classes_scores); // create mat for score per detection
-            cv::Point class_id;
-            double max_class_score;
-            minMaxLoc(scores, 0, &max_class_score, 0, &class_id); // find max score
-            if (max_class_score > CLASS_CONF_THRES)
-            {
-                confidences.push_back(confidence); // add conf to vector
-                class_ids.push_back(class_id.x); // add class_id to vector
-
-                // center coords of bbox
-                float x = data[0];
-                float y = data[1];
-                float w = data[2];
-                float h = data[3];
-                int left = int((x - 0.5 * w) * x_factor);
-                int top = int((y - 0.5 * h) * y_factor);
-                int width = int(w * x_factor);
-                int height = int(h * y_factor);
-                bboxes.push_back(cv::Rect(left, top, width, height));
-            }
-        }
-        data += dimensions; // next detection (x,y,w,h,conf,num of class conf)
-    }
-
-    // if (DEBUG_FLAG)
-    // {
-    //     cout << "Pre NMS bboxes: ";
-    //     for (int i = 0; i < bboxes.size(); i++)
-    //     {
-    //         cv::Rect bbox = bboxes[i];
-    //         cout << bbox << " ";
-    //     }
-    //     cout << endl;           
-    // }
-
-    // nms
-    vector<int> nms_result;
-    cv::dnn::NMSBoxes(bboxes, confidences, DETECT_CONF_THRES, NMS_THRES, nms_result);
-    if (DEBUG_FLAG)
-    {
-        cout << "Post NMS bboxes: ";         
-    }
-    for (int i = 0; i < nms_result.size(); i++)
-    {
-        int idx = nms_result[i];
-        Detection result;
-        result.class_id = class_ids[idx];
-        result.confidence = confidences[idx];
-        result.bbox = bboxes[idx];
-        detector_output.push_back(result); // add to detector_output
-        cout << result.bbox << " ";
-    }
-    cout << endl;
 }
 
 void MOTCorrelationTracker::createTracker(cv::Mat& shrunk_frame, Detection& detection, cv::Ptr<cv::Tracker>& new_tracker)
@@ -281,51 +143,7 @@ void MOTCorrelationTracker::getTrackersPred(cv::Mat& shrunk_frame)
     }
 }
 
-void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string>& class_list)
-{
-    cout << "Drawing BBox for detections...\n";
-    int detections = detector_output.size();
-    for (int i = 0; i < detections; ++i)
-    {
-        Detection& detection = detector_output[i];
-        cv::Rect& bbox = detection.bbox;
-        int class_id = detection.class_id;
-        float confidence = detection.confidence;
-        string class_name = class_list[class_id];
-        cv::Scalar color = colors[class_id % colors.size()];
-        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
-
-        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
-        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
-        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
-    }
-}
-
-void MOTCorrelationTracker::drawBBox(cv::Mat &frame, vector<Track> &multi_tracker, const vector<string> &class_list)
-{
-    cout << "Drawing BBox from trackers...\n";
-    for (int i = 0; i < multi_tracker.size(); i++)
-    {
-        Track& track = multi_tracker[i];
-        if (track.num_hit < MIN_HITS)
-        {
-            continue;
-        }
-
-        cv::Rect& bbox = track.bbox;
-        int class_id = track.class_id;
-        int track_id = track.track_id;
-        float confidence = track.confidence;
-        string class_name = class_list[class_id];
-        cv::Scalar color = colors[class_id % colors.size()];
-        std::string text_label = std::to_string(track_id)+ ": "  + class_name;
-        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
-        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
-        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
-    }
-}
-
-void MOTCorrelationTracker::associate()
+void MOTCorrelationTracker::associate(const vector<Track> &multi_tracker, const vector<Detection> &detector_output)
 {
     cout << "Associating...\n";
     unsigned int num_of_tracks = 0;
@@ -483,7 +301,8 @@ void MOTCorrelationTracker::updateTracks(cv::Mat& shrunk_frame, vector<Detection
 int MOTCorrelationTracker::runObjectTracking()
 {
     cv::Mat frame;
-
+    ObjectDetector detector;
+    
     while (true)
     {
         int64 start_loop = cv::getTickCount();
@@ -500,45 +319,53 @@ int MOTCorrelationTracker::runObjectTracking()
         cv::Mat shrunk_frame;
         cv::resize(frame, shrunk_frame, cv::Size(), SCALE_FACTOR, SCALE_FACTOR, cv::INTER_AREA);
 
-        if (total_frames == 0)
+        if (detector.total_frames == 0)
         {
-            detect(frame, net, detector_output, class_list);
-            int detections = detector_output.size();
+            detector.detect(frame, net, detector.detector_output, class_list);
+            int detections = detector.detector_output.size();
             for (int i = 0; i < detections; ++i)
             {
-                createTrack(shrunk_frame, detector_output[i]);
+                createTrack(shrunk_frame, detector.detector_output[i]);
             }
         }
 
-        else if (total_frames > 10 && total_frames%1== 0)
+        else if (detector.total_frames%1== 0)
         {
-            detector_output.clear();
-        int64 start_pred = cv::getTickCount();
-            getTrackersPred(shrunk_frame);
-        int64 end_pred = cv::getTickCount();
-        double elasped_time_pred = (end_pred - start_pred) * 1000 / cv::getTickFrequency();
-        cout << "Pred Time: " << elasped_time_pred << " ms" << std::endl;
-            detect(frame, net, detector_output, class_list);
+            detector.detector_output.clear();
 
-        int64 start_update = cv::getTickCount();
-            associate();
-            updateTracks(shrunk_frame, detector_output);
-        int64 end_update = cv::getTickCount();
-        double elasped_time_update = (end_update - start_update) * 1000 / cv::getTickFrequency();
-        cout << "Update Time: " << elasped_time_update << " ms" << std::endl;
+            // int64 start_pred = cv::getTickCount();
+
+            getTrackersPred(shrunk_frame);
+
+            // int64 end_pred = cv::getTickCount();
+            // double elasped_time_pred = (end_pred - start_pred) * 1000 / cv::getTickFrequency();
+            // cout << "Pred Time: " << elasped_time_pred << " ms" << std::endl;
+            
+            detector.detect(frame, net, detector.detector_output, class_list);
+
+            // int64 start_update = cv::getTickCount();
+
+            associate(multi_tracker, detector.detector_output);
+            updateTracks(shrunk_frame, detector.detector_output);
+
+            // int64 end_update = cv::getTickCount();
+            // double elasped_time_update = (end_update - start_update) * 1000 / cv::getTickFrequency();
+            // cout << "Update Time: " << elasped_time_update << " ms" << std::endl;
         }
 
         else
         {
-            int64 start_track = cv::getTickCount();
+            // int64 start_track = cv::getTickCount();
+
             getTrackersPred(shrunk_frame);
-            int64 end_track = cv::getTickCount();
-            double elasped_time_track = (end_track - start_track) * 1000 / cv::getTickFrequency();
-            cout << "Track Time: " << elasped_time_track << " ms" << std::endl;
+
+            // int64 end_track = cv::getTickCount();
+            // double elasped_time_track = (end_track - start_track) * 1000 / cv::getTickFrequency();
+            // cout << "Track Time: " << elasped_time_track << " ms" << std::endl;
         }
 
-        drawBBox(frame, multi_tracker, class_list);
-        total_frames++;
+        drawBBox(frame, multi_tracker, class_list, MIN_HITS);
+        detector.total_frames++;
         cv::imshow("Window", frame);
         out.write(frame);
 
@@ -566,7 +393,7 @@ int MOTCorrelationTracker::runObjectTracking()
         cout << endl;
     }
 
-    cout << "Total frames: " << total_frames << "\n";
+    cout << "Total frames: " << detector.total_frames << "\n";
     cap.release();
     out.release();
     cv::destroyAllWindows();

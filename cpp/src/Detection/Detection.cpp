@@ -21,56 +21,6 @@ void ObjectDetector::inputPaths(const string& directory_name, const string& sour
     path_net_input = directory_name + "models/last_exp2.onnx";
 }
 
-void ObjectDetector::loadClassList(vector<string>& class_list)
-{
-    cout << "Loading Class List...\n";
-    ifstream ifs(path_class_input);
-    string line;
-    while (getline(ifs, line))
-    {
-        class_list.push_back(line);
-    }
-}
-
-void ObjectDetector::loadNet(cv::dnn::Net& net)
-{   
-    cv::dnn::Net result = cv::dnn::readNet(path_net_input);
-    if (cv::cuda::getCudaEnabledDeviceCount())
-    {
-        cout << "Running Detection with CUDA...\n";
-        result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
-        result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA_FP16);
-    }
-    else
-    {
-        cout << "Running Detection on CPU...\n";
-        result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-        result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    }
-    net = result;
-}
-
-void ObjectDetector::warmupNet(cv::dnn::Net& net)
-{
-    cout << "Warming Up Detector" << endl;
-    int64 start_warmup = cv::getTickCount();
-
-    cv::Mat dummy_image = cv::Mat::zeros(cv::Size(INPUT_WIDTH, INPUT_HEIGHT), CV_8UC3);  // Create a dummy black image
-
-    // Preprocess the dummy image
-    cv::Mat dummy_blob;
-    cv::dnn::blobFromImage(dummy_image, dummy_blob, 1.0, cv::Size(INPUT_WIDTH, INPUT_HEIGHT), cv::Scalar(), true, false);
-
-    // Warm up the network by performing a forward pass
-    net.setInput(dummy_blob);
-    vector<cv::Mat> dummy_outputs;
-    net.forward(dummy_outputs, net.getUnconnectedOutLayersNames());
-
-    int64 end_warmup = cv::getTickCount();
-    double warmup_Time = (end_warmup - start_warmup) * 1000 / cv::getTickFrequency();
-    cout << "Warm-Up Time: " << warmup_Time << " ms" <<endl; 
-}
-
 void ObjectDetector::initDetector()
 {
     cout << "********Start Init ObjectDetector********\n";
@@ -94,9 +44,9 @@ void ObjectDetector::initDetector()
         cerr << "Error creating VideoWriter\n";
     }
 
-    loadClassList(class_list);
-    loadNet(net);
-    warmupNet(net);
+    loadClassList(class_list, path_class_input);
+    loadNet(net, path_net_input);
+    warmupNet(net, INPUT_WIDTH, INPUT_HEIGHT);
 
     cv::namedWindow("Window", cv::WINDOW_NORMAL);
     cv::resizeWindow("Window", 1920, 1080);
@@ -160,9 +110,27 @@ void ObjectDetector::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Dete
         }
         data += dimensions; // next detection (x,y,w,h,conf,num of class conf)
     }
+
+    if (DEBUG_FLAG)
+    {
+        cout << "Pre NMS bboxes: ";
+        for (int i = 0; i < bboxes.size(); i++)
+        {
+            cv::Rect bbox = bboxes[i];
+            cout << bbox << " ";
+        }
+        cout << endl;           
+    }
+
     // nms
     vector<int> nms_result;
     cv::dnn::NMSBoxes(bboxes, confidences, DETECT_CONF_THRES, NMS_THRES, nms_result);
+    
+    if (DEBUG_FLAG)
+    {
+        cout << "Post NMS bboxes: ";         
+    }
+    
     for (int i = 0; i < nms_result.size(); i++)
     {
         int idx = nms_result[i];
@@ -171,27 +139,12 @@ void ObjectDetector::detect(cv::Mat& input_image, cv::dnn::Net &net, vector<Dete
         result.confidence = confidences[idx];
         result.bbox = bboxes[idx];
         detector_output.push_back(result); // add to detector_output
+        if (DEBUG_FLAG)
+        {
+            cout << result.bbox << " ";
+        }
     }
-}
-
-void ObjectDetector::drawBBox(cv::Mat &frame, vector<Detection>& detector_output, const vector<string>& class_list)
-{
-    cout << "Drawing BBox for detections...\n";
-    int detections = detector_output.size();
-    for (int i = 0; i < detections; ++i)
-    {
-        Detection& detection = detector_output[i];
-        cv::Rect& bbox = detection.bbox;
-        int class_id = detection.class_id;
-        float confidence = detection.confidence;
-        string class_name = class_list[class_id];
-        cv::Scalar color = colors[class_id % colors.size()];
-        std::string text_label = class_name + " " + std::to_string(static_cast<int>(confidence * 100)) + "%";
-
-        cv::rectangle(frame, bbox, color, line_width, cv::LINE_AA);
-        cv::rectangle(frame, cv::Point(bbox.x, bbox.y - 30), cv::Point(bbox.x + bbox.width, bbox.y), color, cv::FILLED);
-        cv::putText(frame, text_label, cv::Point(bbox.x, bbox.y - 5), 0, font_scale, cv::Scalar(), line_thickness, cv::LINE_AA);
-    }
+    cout << endl;
 }
 
 int ObjectDetector::runObjectDetection()
