@@ -12,6 +12,7 @@ Small OpenCV project for object detection and tracking.
 6. OpenCV: OpenCV 4.5.4
 7. pyTorch: torch 1.11.0+cu113
 8. torchvision: torchvision 0.12.0+cu113
+9. YOLOv5: YOLOv5 Release v7.0 (abit more updated)
 
 ## Setup
 
