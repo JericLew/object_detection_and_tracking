@@ -6,7 +6,7 @@ Python version does not include frame shrinking and updating bbox size for track
 and only supports MOSSE
 
 Arguements are /path/to/tracking_ws and /path/to/video/file
-You can change the model used and class list in the init of objectDetector class
+You can change the model used and class list in the init of Detection file
 You can change tracking settings below in constants
 '''
 
@@ -129,7 +129,7 @@ def main(tracking_ws_path, input_video_path):
             print("Nothing Read")
             break
 
-        # if have init tracks at nth frame: do detection and matching
+        # do detection and matching
         if object_tracker.frame_count % object_tracker.rematch_rate == 0:
             # pass through detector
             object_tracker.detect(current_frame)
@@ -140,7 +140,7 @@ def main(tracking_ws_path, input_video_path):
             # handle matches, unmatched tracks and unmatched detections
             object_tracker.refresh_track(current_frame)
 
-        # if have init tracks and not at nth frame: continue tracking
+        # track without detection
         else:
             # continue tracking with updated track
             object_tracker.track(current_frame)
@@ -156,7 +156,6 @@ def main(tracking_ws_path, input_video_path):
         ticks = cv2.getTickCount() - start_time
         elapsed_time = (ticks / cv2.getTickFrequency()) * 1000  # Convert to milliseconds
         print("Time taken:", elapsed_time, "milliseconds\n")
-
 
 if __name__ == '__main__':
     # Start the timer

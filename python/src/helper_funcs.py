@@ -1,3 +1,7 @@
+'''
+python script containing various useful functions
+'''
+
 import cv2 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
