@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////////////////////////
+// Init_NN.cpp: Source file containing functions to initialise object detection network
+//
+// by Jeric,2023
+// 
+
 #include "Init_NN.h"
 
 using namespace std;

@@ -1,30 +1,29 @@
-import cv2 
+'''
+detection script for python
+
+Arguements are /path/to/tracking_ws and /path/to/video/file
+You can change the model used and class list in the init of objectDetector class
+You can change thresholds below in constants
+
+'''
+
+import cv2
+import os
+import argparse
 import numpy as np
 from helper_funcs import *
-import argparse
-import os
-
-# Create the argument parser
-parser = argparse.ArgumentParser(description='Detection engine written in python with opencv')
-
-# Add the input and output file arguments
-parser.add_argument('tracking_ws_path', help='/path/to/tracking_ws/')
-parser.add_argument('input_video_path', help='/path/to/video/file/video.xxx')
-
-
-# Parse the arguments
-args = parser.parse_args()
-input_video_path = args.input_video_path
-tracking_ws_path = args.tracking_ws_path
-video_name = input_video_path.split('/')[-1]
-video_name_no_ext = video_name.split('.')[0]
-output_video_path = os.path.join(tracking_ws_path,'output',video_name_no_ext+'_detect_py.mp4')
-print(output_video_path)
 
 class objectDetector():
 
-    def __init__(self):
-        # Constan-ts
+    def __init__(self, tracking_ws_path, input_video_path):
+        # Handle arguements
+        video_name = input_video_path.split('/')[-1]
+        video_name_no_ext = video_name.split('.')[0]
+        output_video_path = os.path.join(tracking_ws_path,'output',video_name_no_ext+'_detect_py.mp4')
+        network_path = os.path.join(tracking_ws_path,'models/last_exp2.onnx')
+        class_list_path = os.path.join(tracking_ws_path,'classes/classes_merge.txt')
+
+        # Constants
         self.detect_conf_thres = 0.4
         self.class_conf_thres = 0.25
         self.nms_thres = 0.4
@@ -34,7 +33,7 @@ class objectDetector():
 
         # Video I/O
         self.cap = cv2.VideoCapture(input_video_path) # Create a VideoCapture object
-        # self.cap = cv2.VideoCapture(0)  
+        # self.cap = cv2.VideoCapture(0)  # To capture webcam
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.fh = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -42,8 +41,7 @@ class objectDetector():
         self.out = cv2.VideoWriter(output_video_path,cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Detector init
-        self.net = cv2.dnn.readNet('/home/jeric/tracking_ws/models/last_exp2.onnx') # input obj detector network
-
+        self.net = cv2.dnn.readNet(network_path) # input obj detector network
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
@@ -51,6 +49,11 @@ class objectDetector():
         self.detect_bboxes = []
         self.detect_conf = []
         self.detect_class_ids = []
+        self.class_list = []
+
+        # Insert classes into class list
+        with open(class_list_path, "r") as f:
+            self.class_list = [cname.strip() for cname in f.readlines()]
 
 
     def detect(self, current_frame):
@@ -75,8 +78,8 @@ class objectDetector():
         self.detect_class_ids = result_class_ids
     
 
-def main(args=None):
-    object_detector = objectDetector()
+def main(tracking_ws_path, input_video_path,):
+    object_detector = objectDetector(tracking_ws_path, input_video_path)
     cv2.namedWindow("camera", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("camera", 1280, 720)
 
@@ -91,7 +94,7 @@ def main(args=None):
              
         # pass through detector
         object_detector.detect(current_frame)
-        draw_bbox(current_frame, object_detector.detect_bboxes, object_detector.detect_class_ids, tracking=False)
+        draw_bbox(current_frame, object_detector.detect_bboxes, object_detector.detect_class_ids, object_detector.class_list, result_confidences=object_detector.detect_conf,tracking=False)
 
         # Write the frame into the file 'output.avi' 
         object_detector.out.write(current_frame)
@@ -106,4 +109,16 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main()
+    # Create the argument parser
+    parser = argparse.ArgumentParser(description='Detection engine written in python with opencv')
+
+    # Add the input and output file arguments
+    parser.add_argument('tracking_ws_path', help='/path/to/tracking_ws/')
+    parser.add_argument('input_video_path', help='/path/to/video/file/video.xxx')
+
+    # Parse the arguments
+    args = parser.parse_args()
+    input_video_path = args.input_video_path
+    tracking_ws_path = args.tracking_ws_path
+
+    main(tracking_ws_path, input_video_path)

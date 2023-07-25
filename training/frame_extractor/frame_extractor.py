@@ -1,6 +1,16 @@
+'''
+This python script is used to extract frames from a specific video
+
+Inputs are the video file path and output folder path
+
+See merge_class.sh or semi_merge.sh to see how to use a bash script to automate
+the process of preparing the dataset for training
+'''
+
 import cv2 
 import argparse
 import os
+
 start = cv2.getTickCount()
 
 # Create the argument parser

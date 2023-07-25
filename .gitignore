@@ -13,3 +13,4 @@ __pycache__/
 
 # Exclude video1.avi
 !video1.avi
+!video1_detect_cpp.mp4

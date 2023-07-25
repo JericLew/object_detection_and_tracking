@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////////////////////////
+// Init_NN.h: Header file containing functions to initialise object detection network
+//
+// by Jeric,2023
+// 
+
 #ifndef INITNN_H
 #define INITNN_H
 

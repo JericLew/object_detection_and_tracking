@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// MOTCOrrelationTracker.cpp: Source file for Tracking using correlation filters
+//
+// You can change video output name/directory, input class list and model used below
+// See README.md for how to use
+//
+// by Jeric,2023
+// 
+
 #include "MOTCorrelationTracker.h"
 
 using namespace std;
@@ -37,6 +46,7 @@ void MOTCorrelationTracker::inputPaths(const string& directory_name, const strin
         cout << "Using MOSSE";
     else if (tracker_name == "CSRT")
         cout << "CSRT is slow, please use MOSSE"; 
+    cout << endl;
 }
 
 void MOTCorrelationTracker::initTracker()
@@ -157,19 +167,22 @@ void MOTCorrelationTracker::associate(const vector<Track> &multi_tracker, const 
 
     // compute iou matrix as a distance matrix
     for (unsigned int i = 0; i < num_of_tracks; i++) 
-    {
+    {            
         for (unsigned int j = 0; j < num_of_detections; j++)
         {
             // use 1-iou because the hungarian algorithm computes a minimum-cost assignment.
             iou_matrix[i][j] = 1 - GetIOU(multi_tracker[i].bbox, detector_output[j].bbox);
         }
     }
-
-    // solve the assignment problem using hungarian algorithm.
-    // the resulting assignment is [track(prediction) : detection], with len=preNum
-    HungarianAlgorithm HungAlgo;
-    assignment.clear();
-    HungAlgo.Solve(iou_matrix, assignment);
+    // Check if the iou_matrix is empty
+    if (!iou_matrix.empty())
+    {
+        // solve the assignment problem using hungarian algorithm.
+        // the resulting assignment is [track(prediction) : detection], with len=preNum
+        HungarianAlgorithm HungAlgo;
+        assignment.clear();
+        HungAlgo.Solve(iou_matrix, assignment);
+    }
 
     if (DEBUG_FLAG)
     {
@@ -319,17 +332,7 @@ int MOTCorrelationTracker::runObjectTracking()
         cv::Mat shrunk_frame;
         cv::resize(frame, shrunk_frame, cv::Size(), SCALE_FACTOR, SCALE_FACTOR, cv::INTER_AREA);
 
-        if (detector.total_frames == 0)
-        {
-            detector.detect(frame, net, detector.detector_output, class_list);
-            int detections = detector.detector_output.size();
-            for (int i = 0; i < detections; ++i)
-            {
-                createTrack(shrunk_frame, detector.detector_output[i]);
-            }
-        }
-
-        else if (detector.total_frames%1== 0)
+        if (detector.total_frames % rematch_rate == 0)
         {
             detector.detector_output.clear();
 

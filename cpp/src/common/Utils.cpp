@@ -1,3 +1,9 @@
+///////////////////////////////////////////////////////////////////////////////
+// Utils.cpp: Source file containing utlitiy functions for Detection and Tracking
+//
+// by Jeric,2023
+// 
+
 #include "Utils.h"
 
 using namespace std;

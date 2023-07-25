@@ -1,3 +1,11 @@
+///////////////////////////////////////////////////////////////////////////////
+// Utils.h: Header file containing utlitiy functions for Detection and Tracking
+//
+// You can change BBox drawing settings in Constants
+//
+// by Jeric,2023
+// 
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -5,6 +13,14 @@
 #include <opencv2/opencv.hpp>
 
 using namespace std;
+
+/********Constants********/
+// For Drawing BBoxes
+const vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
+const float line_width = 3.0;
+const float font_scale = line_width / 3.0f;
+const float line_thickness = max(line_width - 1.0f, 1.0f);
+
 /********Data Structs********/
 struct Detection
 {
@@ -23,13 +39,6 @@ struct Track
     int num_hit;
     int num_miss;
 };
-
-/********Constants********/
-// For Drawing BBoxes
-const vector<cv::Scalar> colors = {cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 0)};
-const float line_width = 3.0;
-const float font_scale = line_width / 3.0f;
-const float line_thickness = max(line_width - 1.0f, 1.0f);
 
 /********Functions********/
 cv::Mat formatYOLOv5(const cv::Mat& input_image);

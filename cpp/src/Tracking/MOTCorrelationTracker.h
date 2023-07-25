@@ -1,3 +1,11 @@
+///////////////////////////////////////////////////////////////////////////////
+// MOTCOrrelationTracker.h: Header file for Tracking using correlation filters
+//
+// You can change parameters (scale factor, thresholds and network input details below in Constants
+//
+// by Jeric,2023
+// 
+
 #ifndef MOTCORRELATION_H
 #define MOTCORRELATION_H
 
@@ -62,8 +70,19 @@ private:
     // const int TIMER_FLAG = 1; // TODO TIMER TO TEST PERF
     const int DEBUG_FLAG = 0;
 
-    /********User Input*****
-     * ***/
+    /********Constants********/
+    const double SCALE_FACTOR = 1.0 / 3.0;
+    const float INPUT_WIDTH = 640.0;
+    const float INPUT_HEIGHT = 640.0;
+
+    // For Association 
+    const int rematch_rate = 1; // detect and match to track every _ frame
+    const int MAX_AGE = 1;
+    const int MIN_HITS = 3;
+    const float IOU_THRES = 0.3; // IoU Thres to reject assocations
+    const float REFRESH_IOU_THRES = 0.80; // IoU Thres to replace old tracker with new for current track
+
+    /********User Input********/
     string path_video_input;
     string path_video_output;
     string path_class_input;
@@ -79,17 +98,6 @@ private:
     cv::VideoCapture cap;
     cv::VideoWriter out;
     cv::dnn::Net net;
-
-    /********Constants********/
-    const double SCALE_FACTOR = 1.0 / 3.0;
-    const float INPUT_WIDTH = 640.0;
-    const float INPUT_HEIGHT = 640.0;
-
-    // For Association
-    const int MAX_AGE = 1;
-    const int MIN_HITS = 3;
-    const float IOU_THRES = 0.3; // IoU Thres to reject assocations
-    const float REFRESH_IOU_THRES = 0.80; // IoU Thres to replace old tracker with new for current track
 };
 
 #endif

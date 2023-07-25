@@ -1,42 +1,38 @@
-import cv2 
+'''
+tracking script for python using correlation filters
+
+NOTE:
+Python version does not include frame shrinking and updating bbox size for track
+and only supports MOSSE
+
+Arguements are /path/to/tracking_ws and /path/to/video/file
+You can change the model used and class list in the init of objectDetector class
+You can change tracking settings below in constants
+'''
+
+import cv2
+import os
+import argparse
 import numpy as np
 from helper_funcs import *
-'''
-TODO
-- Fix drifing (readd track)
-- Make rematch rate dependant on FPS
-- missing frames from detect (drawing and writing not done for detect frames)
-- Increase speed
-'''
-class objectTracker():
+from detection import *
 
-    def __init__(self):
-        # Constan-ts
-        self.detect_conf_thres = 0.4
-        self.class_conf_thres = 0.25
-        self.nms_thres = 0.4
+class objectTracker(objectDetector):
+
+    def __init__(self, tracking_ws_path, input_video_path):
+        super().__init__(tracking_ws_path, input_video_path)
+        # Handle arguements
+        video_name = input_video_path.split('/')[-1]
+        video_name_no_ext = video_name.split('.')[0]
+        output_video_path = os.path.join(tracking_ws_path,'output',video_name_no_ext+'_track_py.mp4')
+
+        # Constants
         self.max_miss_streak = 9 # max number of misses during track refresh
         self.min_hit_streak = 3 # min number of hits during track refresh
-        self.rematch_rate = 10 # no of frames per track refresh
-
-        # Variables
-        self.frame_count = 0
+        self.rematch_rate = 1 # no of frames per track refresh
 
         # Video I/O
-        self.cap = cv2.VideoCapture('/home/jeric/tracking_ws/source/video1.avi') # Create a VideoCapture object
-        # self.cap = cv2.VideoCapture(0, cv2.CAP_V4L2) 
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.fw = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.fh = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print(f"FPS: {self.fps}, Width: {self.fw}, Height: {self.fh}")
-        self.out = cv2.VideoWriter(f"/home/jeric/tracking_ws/output/track_ass_py.mp4",cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
-
-        # Detector init
-        
-        self.net = cv2.dnn.readNet('/home/jeric/tracking_ws/models/yolov5s.onnx') # input obj detector network
-
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        self.out = cv2.VideoWriter(output_video_path,cv2.VideoWriter_fourcc('m','p','4','v'),self.fps,(self.fw,self.fh)) # create writer obj
 
         # Multi-Tracker init
         self.multi_tracker = np.empty((0, 4)) # create tracker list
@@ -44,41 +40,14 @@ class objectTracker():
         # Data storage
         self.track_bboxes = []
         self.track_class_ids = []
-        self.detect_bboxes = []
-        self.detect_conf = []
-        self.detect_class_ids = []
         self.matches = []
         self.unmatched_tracks = []
         self.unmatched_detections = []
-
-
-    def detect(self, current_frame):
-        print('Detecting Objects...')
-
-        # format image in to fit 640x640 and colour
-        blob, input_image = format_yolov5(current_frame) 
-
-        # set formatted image into net and pass through net to obtain output
-        self.net.setInput(blob)
-        predictions = self.net.forward()
-        output = predictions[0]
-
-        # unwrap detections into usable format
-        bboxes, confidences, class_ids = unwrap_detection_numpy(input_image,output, self.detect_conf_thres, self.class_conf_thres)
-
-        # NMS to remove dup and overlap
-        result_bboxes, result_confidences, result_class_ids = nms(bboxes, confidences, class_ids, self.detect_conf_thres, self.nms_thres)
-
-        self.detect_bboxes = result_bboxes
-        self.detect_conf = result_confidences
-        self.detect_class_ids = result_class_ids
-
 
     def association(self, current_frame):
         self.track_bboxes = self.update_multi_tracker(current_frame)
         self.matches, self.unmatched_tracks, self.unmatched_detections = \
             hung_algo(self.track_bboxes, self.detect_bboxes) # matches in (track_id, detect_id)
-
 
     # handle new tracks and deleted tracks aft a few hits or miss
     def refresh_track(self, current_frame):
@@ -108,6 +77,8 @@ class objectTracker():
             self.multi_tracker[track_id][3] += 1 # + 1 to miss streak
             if self.multi_tracker[track_id][3] >= self.max_miss_streak: # if miss streak larger or equal to allowed
                 self.multi_tracker[track_id][0] = None # make it none if it was already active (so numbers wont jump)  
+                
+        self.track_class_ids = self.multi_tracker[:,1]           
                 
 
     def track(self, current_frame):
@@ -142,19 +113,8 @@ class objectTracker():
                 self.track_bboxes.append(box)
         return self.track_bboxes
 
-    
-    def write_frame(self, current_frame):
-        # Write the frame into the file 'output.avi' 
-        self.out.write(current_frame)
-
-    
-    def display_frame(self, current_frame):
-        cv2.imshow("camera", current_frame) # Display image
-        cv2.waitKey(1)
-        
-
-def main(args=None):
-    object_tracker = objectTracker()
+def main(tracking_ws_path, input_video_path):
+    object_tracker = objectTracker(tracking_ws_path, input_video_path)
     cv2.namedWindow("camera", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("camera", 1280, 720)
     cv2.cuda.setDevice(0) 
@@ -184,10 +144,11 @@ def main(args=None):
         else:
             # continue tracking with updated track
             object_tracker.track(current_frame)
-            draw_bbox(current_frame, object_tracker.track_bboxes, object_tracker.track_class_ids, tracking=True)
-            object_tracker.write_frame(current_frame)
-            object_tracker.display_frame(current_frame)
 
+        draw_bbox(current_frame, object_tracker.track_bboxes, object_tracker.track_class_ids, object_tracker.class_list, tracking=True)
+        object_tracker.out.write(current_frame)
+        cv2.imshow("camera", current_frame)
+        cv2.waitKey(1)
 
         object_tracker.frame_count += 1
 
@@ -201,7 +162,19 @@ if __name__ == '__main__':
     # Start the timer
     total_start_time = cv2.getTickCount()
 
-    main()
+    # Create the argument parser
+    parser = argparse.ArgumentParser(description='Detection engine written in python with opencv')
+
+    # Add the input and output file arguments
+    parser.add_argument('tracking_ws_path', help='/path/to/tracking_ws/')
+    parser.add_argument('input_video_path', help='/path/to/video/file/video.xxx')
+
+    # Parse the arguments
+    args = parser.parse_args()
+    input_video_path = args.input_video_path
+    tracking_ws_path = args.tracking_ws_path
+
+    main(tracking_ws_path, input_video_path)
     
     # Calculate the elapsed time
     total_ticks = cv2.getTickCount() - total_start_time

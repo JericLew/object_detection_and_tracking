@@ -1,3 +1,13 @@
+'''
+NOTE: This script is deprecated and not used
+
+This python script is used to convert .mat file to a .csv file
+.mat file contains the ground truth for object detection
+from the ObjectGT folder from the Singapore Maritime Dataset.
+
+Inputs are the .mat file path and output folder path
+'''
+
 import scipy.io as sio
 import numpy as np
 import pandas as pd
@@ -5,7 +15,7 @@ import csv
 import argparse
 
 # Create the argument parser
-parser = argparse.ArgumentParser(description='Convert .mat to .csv to multiple .txt')
+parser = argparse.ArgumentParser(description='Convert .mat to .csv')
 
 # Add the input and output file arguments
 parser.add_argument('input_mat_path', help='Input .mat file path')
@@ -19,7 +29,6 @@ input_mat_path = args.input_mat_path
 video_name = input_mat_path.split('/')[-1].split('_ObjectGT.mat')[0]
 output_folder_path = args.output_folder_path
 output_csv = output_folder_path + video_name + ".csv"
-output_txt = output_folder_path + video_name + '_' + str(frame_count) + '.txt'
 
 data = sio.loadmat(input_mat_path)
 print(data.keys())

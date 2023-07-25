@@ -1,3 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// Detection.cpp: Source file for Detection
+//
+// You can change video output name/directory, input class list and model used below
+// See README.md for how to use
+//
+// by Jeric,2023
+// 
+
 #include "Detection.h"
 
 using namespace std;

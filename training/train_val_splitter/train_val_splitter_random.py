@@ -1,3 +1,19 @@
+'''
+This python script is used to randomly split the labels and frames
+of the data set into train and validatio sets.
+
+Inputs are the source folder containing "images" and "labels" folder
+and the split ratio i.e. 0.7 for 70% Train 30% Val
+
+NOTE:
+The input folder should look like           ~/dataset/merge_class (without the last '/')
+Images are contained in                     ~/dataset/merge_class/images/
+Labels are contained in                     ~/dataset/merge_class/labels/
+
+See merge_class.sh or semi_merge.sh to see how to use a bash script to automate
+the process of preparing the dataset for training
+'''
+
 import os
 import random
 import shutil

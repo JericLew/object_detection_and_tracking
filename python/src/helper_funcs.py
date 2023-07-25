@@ -31,6 +31,7 @@ def unwrap_detection_numpy(input_image, output_data, detect_conf_thres, class_co
     x_factor = image_width / 640
     y_factor = image_height / 640
 
+    # check detect conf and class conf
     valid_indices = np.where(output_data[:, 4] >= detect_conf_thres)[0]
     valid_classes = np.argmax(output_data[valid_indices, 5:], axis=1)
     valid_scores = output_data[valid_indices, 5:][np.arange(len(valid_indices)), valid_classes]
@@ -42,6 +43,7 @@ def unwrap_detection_numpy(input_image, output_data, detect_conf_thres, class_co
 
     valid_rows = output_data[valid_indices]
     valid_boxes = valid_rows[:, :4]
+    valid_conf = output_data[valid_indices, 4]
 
     valid_boxes[:, 0] = (valid_boxes[:, 0] - 0.5 * valid_boxes[:, 2])
     valid_boxes[:, 1] = (valid_boxes[:, 1] - 0.5 * valid_boxes[:, 3])
@@ -53,7 +55,7 @@ def unwrap_detection_numpy(input_image, output_data, detect_conf_thres, class_co
     valid_boxes[:, 3] = valid_boxes[:, 3] * y_factor
 
     boxes = valid_boxes.tolist()
-    confidences = valid_scores.tolist()
+    confidences = valid_conf.tolist()
     class_ids = valid_classes.tolist()
 
     return boxes, confidences, class_ids
@@ -105,11 +107,7 @@ def nms(in_boxes, in_confidences,in_class_ids, detect_conf_thres, nms_thres):
         result_class_ids.append(in_class_ids[i])
     return result_boxes, result_confidences, result_class_ids
 
-def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
-    class_list = []
-    with open("/home/jeric/tracking_ws/classes/classes_merge.txt", "r") as f:
-        class_list = [cname.strip() for cname in f.readlines()]
-
+def draw_bbox(current_frame, result_boxes, result_class_ids, class_list, result_confidences = [], tracking=False):
     colors = [(255, 255, 0), (0, 255, 0), (0, 255, 255), (255, 0, 0)]
 
     if tracking==False:
@@ -118,11 +116,10 @@ def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
             (x, y, w, h) = [int(coord) for coord in box]
             class_id = result_class_ids[object_id]
             color = colors[class_id % len(colors)]
-            #conf  = result_confidences[object_id]
+            conf  = int(result_confidences[object_id]*100)
             cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
             cv2.rectangle(current_frame, (x,y-30), (x+w,y), color, -1)
-
-            cv2.putText(current_frame, class_list[class_id] , (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0),2)
+            cv2.putText(current_frame, f"{class_list[class_id]} {conf}%" , (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0),2)
     else:
         for object_id, box in enumerate(result_boxes):
             if box == None:
@@ -131,7 +128,7 @@ def draw_bbox(current_frame, result_boxes, result_class_ids, tracking=False):
             (x, y, w, h) = [int(coord) for coord in box]
             class_id = result_class_ids[object_id]
             color = colors[class_id % len(colors)]
-            #conf  = result_confidences[object_id]
+            # conf  = result_confidences[object_id]
             cv2.rectangle(current_frame, (x,y), (x+w,y+h), color, 2)
             cv2.rectangle(current_frame, (x,y-30), (x+w,y), color, -1)
             cv2.putText(current_frame, f"{class_list[class_id]}: {str(object_id)}", (x + 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2)
@@ -180,8 +177,8 @@ def hung_algo(track_boxes, detect_boxes):
     # Perform matching using the Hungarian algorithm
     row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
-    print(row_ind)
-    print(col_ind)
+    # print(row_ind)
+    # print(col_ind)
 
     # Create matches based on the matching results
     for row, col in zip(row_ind, col_ind):

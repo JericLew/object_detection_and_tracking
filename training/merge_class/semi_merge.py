@@ -1,3 +1,24 @@
+'''
+This python script is used to go through all .txt yolo label files in a directory
+and update the classes of different objects to merge or remove them.
+
+This script merges the 10 classes in the Singapore Maritime Dataset to 7 classes.
+
+Ferry:         Ferry
+Buoy:          Buoy
+Vessel:        Vessel
+Speedboat:     Speedboat
+Boat:          Boat
+Kayak:         Kayak
+Sailboat:      Sailboat
+Background:    Swimmer, Aerial, Others
+
+Input is the path to to folder containing labels
+
+See merge_class.sh or semi_merge.sh to see how to use a bash script to automate
+the process of preparing the dataset for training
+'''
+
 import scipy.io as sio
 import numpy as np
 import pandas as pd

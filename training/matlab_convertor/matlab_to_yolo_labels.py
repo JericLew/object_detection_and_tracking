@@ -1,8 +1,25 @@
+'''
+This python script is used to convert .mat file to .txt file in yolo format.
+.mat file contains the ground truth for object detection
+from the ObjectGT folder from the Singapore Maritime Dataset.
+
+Inputs are the .mat file path and output folder path
+
+NOTE: Please change the frame width and frame height accordingly (fw, fh)
+
+See merge_class.sh or semi_merge.sh to see how to use a bash script to automate
+the process of preparing the dataset for training
+'''
+
 import scipy.io as sio
 import numpy as np
 import pandas as pd
 import os
 import argparse
+
+# TODO change the frame width accordingly
+fw = 1920
+fh = 1080
 
 # Create the argument parser
 parser = argparse.ArgumentParser(description='Convert .mat to .csv to multiple .txt')
@@ -17,7 +34,6 @@ args = parser.parse_args()
 input_mat_path = args.input_mat_path
 video_name = input_mat_path.split('/')[-1].split('_ObjectGT.mat')[0]
 output_folder_path = args.output_folder_path
-output_csv = output_folder_path + video_name + ".csv"
 
 # make dir if it doesnt exist
 os.makedirs(output_folder_path, exist_ok=True)
@@ -50,9 +66,6 @@ data_rows = struct_data[0, ].tolist()
 # Determine the number of rows and columns
 num_fields = len(field_names)
 
-
-fw = 1920
-fh = 1080
 count = 0
 
 for frame_num in range(struct_data.shape[1]):

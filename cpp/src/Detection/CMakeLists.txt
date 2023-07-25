@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+###############################################################################
+# CMakeList.txt for Detection
+# NOTE: Please change directory to opencv installation in set(OpenCV_DIR /path/to/opencv/)
+
 project( Detection )
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -26,7 +29,7 @@ enable_cxx_compiler_flag_if_supported("-Weffc++")
 # enable_cxx_compiler_flag_if_supported("-Wsign-conversion")
 
 # Set to your opencv directory
-set(OpenCV_DIR /home/jeric/opencv-4.5.4-linux/lib/cmake/opencv4)
+set(OpenCV_DIR ~/opencv-4.5.4-linux/lib/cmake/opencv4)
 
 find_package( OpenCV REQUIRED )
 # Add include directories
