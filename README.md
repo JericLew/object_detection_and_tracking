@@ -10,9 +10,10 @@ Small OpenCV project for object detection and tracking.
 4. CUDA: CUDA 11.4
 5. CUDNN: CUDNN 8.9.2.26-1+cuda11.8
 6. OpenCV: OpenCV 4.5.4
-7. pyTorch: torch 1.11.0+cu113
-8. torchvision: torchvision 0.12.0+cu113
-9. YOLOv5: YOLOv5 Release v7.0 (abit more updated)
+7. Python: python 3.8
+8. pyTorch: torch 1.11.0+cu113
+9. torchvision: torchvision 0.12.0+cu113
+10. YOLOv5: YOLOv5 Release v7.0 (abit more updated)
 
 ## Setup
 
@@ -125,6 +126,8 @@ python3 export.py --weights best.pt --include onnx --device 0 --opset 11
 
 ### CPP
 
+Before usage of CPP code, open CMakeLists.txt and change directory of OpenCV 4.5.4 install
+
 1. Enter Detection/Tracking directory
    ```sh
    cd ~/tracking_ws/cpp/src/Detection
@@ -165,4 +168,36 @@ Arguements are /path/to/tracking/ws, /path/to/video/input and tracker name (MOSS
 
 ### Python
 
-Note: Python scripts for detection and tracking are outdated
+Run python script using python 3.8.
+
+```sh
+python3 ~/tracking_ws/python/src/detection.py ~/tracking_ws/ ~/tracking_ws/videos/video1.avi
+```
+
+```sh
+python3 ~/tracking_ws/python/src/tracking.py ~/tracking_ws/ ~/tracking_ws/videos/video1.avi
+```
+
+### Models
+
+Use YOLOv5 commands as above to export .pt model to .onnx for OpenCV DNN
+
+Below are the descriptions of the different trained models:
+
+300_0.7_image-weights: (image-weight sampling)
+python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50 --image-weights
+
+exp: (weighted loss)
+python train_weighted.py --img 640 --epochs 300 --data merge_class_random_split.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50
+
+exp2: (image-weight sampling + augmentation)
+python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --hyp ./data/hyps/hyp.scratch-low-edited.yaml --weights yolov5s.pt --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50 --image-weights
+
+exp3: (image-weight sampling + augmentation + scratch)
+python train.py --img 640 --epochs 300 --data merge_class_random_split.yaml --hyp ./data/hyps/hyp.scratch-low-edited.yaml --weights '' --cfg yolov5s.yaml --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50 --image-weights
+
+exp4: (image-weight sampling + augmentation + scratch)
+python train.py --img 640 --epochs 1000 --data merge_class_random_split.yaml --hyp ./data/hyps/hyp.scratch-low-edited.yaml --weights '' --cfg yolov5s.yaml --batch-size 64 --device 0 --optimizer AdamW --patience 50 --save-period 50 --image-weights
+
+exp5: (weighted loss + augmentation + scratch)
+python train_weighted.py --img 640 --epochs 1000 --data merge_class_random_split.yaml   --hyp ./data/hyps/hyp.scratch-low-edited.yaml --weights '' --cfg yolov5s.yaml --batch-size 64 --device 0 --optimizer AdamW --patience 150 --save-period 50
