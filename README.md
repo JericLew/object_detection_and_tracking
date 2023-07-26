@@ -201,3 +201,36 @@ python train.py --img 640 --epochs 1000 --data merge_class_random_split.yaml --h
 
 exp5: (weighted loss + augmentation + scratch)
 python train_weighted.py --img 640 --epochs 1000 --data merge_class_random_split.yaml   --hyp ./data/hyps/hyp.scratch-low-edited.yaml --weights '' --cfg yolov5s.yaml --batch-size 64 --device 0 --optimizer AdamW --patience 150 --save-period 50
+
+## Useful Links
+
+### Xavier NX
+
+#### Setup
+
+- https://developer.nvidia.com/embedded/learn/get-started-jetson-xavier-nx-devkit
+- https://docs.nvidia.com/deeplearning/frameworks/install-pytorch-jetson-platform/index.html (pyTorch Install)
+- https://developer.nvidia.com/embedded/downloads (Different pyTorch Versions)
+- https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-pytorch (Using Docker Image)
+- https://nvidia-ai-iot.github.io/jetson-min-disk/ (Minimise Disk Space)
+
+#### TensorRT
+
+I recommend to read through all of them to understand the options available as TensorRT can be used differently.
+
+- https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#gettingstarted (TensorRT Install)
+- https://roboticsknowledgebase.com/wiki/machine-learning/yolov5-tensorrt/ (Guide on converting to TensorRT using CLI with Jetson + ROS2)
+- https://learnopencv.com/how-to-convert-a-model-from-pytorch-to-tensorrt-and-speed-up-inference/ (Guide on converting to TensorRT with python)
+- https://learnopencv.com/how-to-run-inference-using-tensorrt-c-api/ (Using TensorRT with C++)
+- https://www.seeedstudio.com/blog/2022/08/23/faster-inference-with-tensorrt-on-nvidia-jetson-run-yolov5-at-27-fps-on-jetson-nano/ (Guide on YOLOv5 with Jetson, uses NVIDIA Deepstream)
+- https://github.com/wang-xinyu/tensorrtx (Open Source TensorRT convertor and inference engine)
+- https://github.com/NVIDIA-AI-IOT/torch2trt (NVIDIA's TensorRT convertor)
+
+### Object Tracking
+
+Here are some Object Tracker repos that are interesting
+
+- https://github.com/abewley/sort
+- https://github.com/nwojke/deep_sort/tree/master/deep_sort
+- https://github.com/Smorodov/Multitarget-tracker
+- https://github.com/mcximing/hungarian-algorithm-cpp
