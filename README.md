@@ -180,7 +180,7 @@ python3 ~/tracking_ws/python/src/tracking.py ~/tracking_ws/ ~/tracking_ws/videos
 
 ### Models
 
-Use YOLOv5 commands as above to export .pt model to .onnx for OpenCV DNN
+There might be some issues when using the .onnx models, if so use YOLOv5 commands as above to export .pt model to .onnx for OpenCV DNN.
 
 Below are the descriptions of the different trained models:
 
